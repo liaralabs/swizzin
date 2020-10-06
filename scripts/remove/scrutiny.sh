@@ -9,6 +9,5 @@ systemctl disable -q --now scrutiny-collector.timer
 systemctl disable -q --now scrutiny-collector.service
 
 userdel -rf scrutiny
-rm -rf $scrutinydir
 
 rm /install/.scrutiny.lock
