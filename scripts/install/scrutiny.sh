@@ -1,13 +1,12 @@
 #!/bin/bash
 
-#Need to make sure it's 7.0+
-
 
 scrutinydir="/opt/scrutiny"
 webport=8086
 
-
 _setup () {
+    #Need to make sure it's 7.0+
+    #Not sure what debian or old ubuntus have
     apt_install smartmontools
 
     mkdir -p "${scrutinydir}"/config
@@ -19,7 +18,7 @@ _setup () {
 }
 
 _install () {
-    echo "Downloading binaries" | tee -a $log
+    echo "Downloading binaries and extracting source code" | tee -a $log
     dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep web-linux | head -1 | cut -d\" -f 4)
     # shellcheck disable=SC2181
     if [[ $? != 0 ]]; then
@@ -28,7 +27,6 @@ _install () {
     fi
     wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-web-linux-amd64 >> $log 2>&1
     chmod +x "${scrutinydir}"/bin/scrutiny-web-linux-amd64
-
 
     dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep web-frontend | head -1 | cut -d\" -f 4)
     # shellcheck disable=SC2181
@@ -68,11 +66,12 @@ EOF
     wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-amd64 >> $log 2>&1
 
     chmod +x "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-amd64
-    
     chown -R scrutiny:nogroup /opt/scrutiny
+    echo "Files downloaded"
 }
 
 _systemd () {
+    echo "Installing systemd services"
     cat > /etc/systemd/system/scrutiny-web.service <<SYSD
 [Unit]
 Description=Scrutiny web frontend
@@ -102,7 +101,6 @@ WorkingDirectory=/app/shoes-scraper
 WantedBy=multi-user.target
 EOF
 
-
     cat > /etc/systemd/system/scrutiny-collector.timer<<EOF
 [Unit] 
 Description=Run scrutiny-collector every 5 minutes
@@ -124,12 +122,25 @@ EOF
 
     systemctl enable --now scrutiny-collector.timer
     systemctl enable --now scrutiny-collector.service
+    echo "Scrutiny services started"
 }
 
 _nginx () {
     if [[ -f /install/.nginx.lock ]]; then
+        echo "Configuring nginx"
         # bash /etc/swizzin/scripts/nginx/scrutiny.sh
         systemctl reload nginx
+        echo "Nginx configured"
+        #TODO make file when baseurl is available
+        echo "(not really m8)"
     fi
 }
+
+_setup
+_install
+_systemd
+_nginx
+
+touch /install/.scrutiny.lock
+echo "Scrutiny installed"
 
