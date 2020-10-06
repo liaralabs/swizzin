@@ -117,13 +117,14 @@ WantedBy=timers.target
 EOF
 
     systemctl daemon-reload
-    systemctl enable --now scrutiny-web
+    systemctl enable --now -q scrutiny-web
 
     # One run for good measure
-    ${scrutinydir}/bin/scrutiny-collector-metrics-linux-amd64 run --api-endpoint "http://localhost:$webport"
+    sleep 5
+    ${scrutinydir}/bin/scrutiny-collector-metrics-linux-amd64 run --api-endpoint "http://localhost:$webport" >> $log 2>&1
 
-    systemctl enable --now scrutiny-collector.timer
-    systemctl enable --now scrutiny-collector.service
+    systemctl enable --now -q scrutiny-collector.timer
+    systemctl enable --now -q scrutiny-collector.service
     echo "Scrutiny services started"
 }
 
