@@ -19,15 +19,23 @@ _setup () {
 }
 
 _install () {
+
+    if [[ $(arch) =~ "_64" ]]; then 
+        binversion="amd64"
+    else
+        echo "Arch not currently supported, exiting"
+        exit 1
+    fi
+
     echo "Downloading binaries and extracting source code" | tee -a $log
-    dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep web-linux | head -1 | cut -d\" -f 4)
+    dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep web-linux-$binversion | head -1 | cut -d\" -f 4)
     # shellcheck disable=SC2181
     if [[ $? != 0 ]]; then
         echo "Failed to query github" | tee -a $log
         exit 1
     fi
-    wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-web-linux-amd64 >> $log 2>&1
-    chmod +x "${scrutinydir}"/bin/scrutiny-web-linux-amd64
+    wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-web-linux-$binversion >> $log 2>&1
+    chmod +x "${scrutinydir}"/bin/scrutiny-web-linux-$binversion
 
     dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep web-frontend | head -1 | cut -d\" -f 4)
     # shellcheck disable=SC2181
@@ -59,15 +67,15 @@ web:
     # baseurl : /
 EOF
 
-    dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep metrics | head -1 | cut -d\" -f 4)
+    dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep collector-metrics-linux-$binversion | head -1 | cut -d\" -f 4)
     # shellcheck disable=SC2181
     if [[ $? != 0 ]]; then
         echo "Failed to query github" | tee -a $log
         exit 1
     fi
-    wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-amd64 >> $log 2>&1
+    wget "${dlurl}" -O "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-$binversion >> $log 2>&1
 
-    chmod +x "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-amd64
+    chmod +x "${scrutinydir}"/bin/scrutiny-collector-metrics-linux-$binversion
     chown -R scrutiny:nogroup /opt/scrutiny
     echo "Files downloaded"
 }
@@ -81,7 +89,7 @@ After=network.target
 
 [Service]
 User=scrutiny
-ExecStart=${scrutinydir}/bin/scrutiny-web-linux-amd64 start --config ${scrutinydir}/config/scrutiny.yaml
+ExecStart=${scrutinydir}/bin/scrutiny-web-linux-$binversion start --config ${scrutinydir}/config/scrutiny.yaml
 Restart=on-abort
 TimeoutSec=20
 
@@ -95,7 +103,7 @@ Description=Runs scrutiny collector
 Wants=scrutiny-collector.timer
 
 [Service]
-ExecStart=${scrutinydir}/bin/scrutiny-collector-metrics-linux-amd64 run --api-endpoint "http://localhost:$webport"
+ExecStart=${scrutinydir}/bin/scrutiny-collector-metrics-linux-$binversion run --api-endpoint "http://localhost:$webport"
 WorkingDirectory=/app/shoes-scraper
 # Slice=shoes-scraper.slice
 
@@ -121,7 +129,7 @@ EOF
 
     # One run for good measure
     sleep 5
-    ${scrutinydir}/bin/scrutiny-collector-metrics-linux-amd64 run --api-endpoint "http://localhost:$webport" >> $log 2>&1
+    ${scrutinydir}/bin/scrutiny-collector-metrics-linux-$binversion run --api-endpoint "http://localhost:$webport" >> $log 2>&1
 
     systemctl enable --now -q scrutiny-collector.timer
     systemctl enable --now -q scrutiny-collector.service
