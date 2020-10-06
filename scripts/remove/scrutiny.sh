@@ -1,4 +1,6 @@
 #!/bin/bash
+# Scrutiny installer by flying_sausages for Swizzin 2020
+# GPLv3 applies
 
 scrutinydir="/opt/scrutiny"
 
