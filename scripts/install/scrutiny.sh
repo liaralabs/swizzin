@@ -55,6 +55,7 @@ web:
   listen:
     port: $webport
     host: 0.0.0.0
+    # baseurl : /
 EOF
 
     dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep metrics | head -1 | cut -d\" -f 4)
@@ -128,11 +129,9 @@ EOF
 _nginx () {
     if [[ -f /install/.nginx.lock ]]; then
         echo "Configuring nginx"
-        # bash /etc/swizzin/scripts/nginx/scrutiny.sh
+        bash /etc/swizzin/scripts/nginx/scrutiny.sh
         systemctl reload nginx
         echo "Nginx configured"
-        #TODO make file when baseurl is available
-        echo "(not really m8)"
     fi
 }
 
