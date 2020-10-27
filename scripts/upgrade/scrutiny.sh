@@ -5,6 +5,7 @@ if [[ ! -f /install/.scrutiny.lock ]]; then
   exit 1
 fi
 
+#TODO make a backup before? not sure if there will be any persistent data, could move it somewhere else
 bash /etc/swizzin/scripts/remove/scrutiny.sh
 
 bash /etc/swizzin/scripts/install/scrutiny.sh

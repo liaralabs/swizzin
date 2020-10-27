@@ -66,7 +66,6 @@ web:
   listen:
     port: $webport
     host: 0.0.0.0
-    # baseurl : /
 EOF
 
     dlurl=$(curl -s https://api.github.com/repos/AnalogJ/scrutiny/releases/latest | grep "browser_download_url" | grep collector-metrics-linux-$binversion | head -1 | cut -d\" -f 4)
@@ -106,7 +105,7 @@ Wants=scrutiny-collector.timer
 
 [Service]
 ExecStart=${scrutinydir}/bin/scrutiny-collector-metrics-linux-$binversion run --api-endpoint "http://localhost:$webport"
-WorkingDirectory=/app/shoes-scraper
+WorkingDirectory=${scrutinydir}
 # Slice=shoes-scraper.slice
 
 [Install]
