@@ -61,6 +61,8 @@ web:
       # The path to the Scrutiny frontend files (js, css, images) must be specified.
       # We'll populate it with files in the next section
       path: ${scrutinydir}/web
+    # backend:
+      # basepath: /scrutiny
   listen:
     port: $webport
     host: 0.0.0.0
