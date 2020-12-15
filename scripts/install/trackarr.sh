@@ -71,11 +71,13 @@ EOF
   # filters:
 EOF
         fi
-
+        echo_progress_done "Arrs added"
     fi
-    echo_progress_done "Arrs added"
 }
 
 _install
 # _nginx
 _arrconf
+
+touch /install/.trackarr.lock
+echo_success "Trakarr installed"
