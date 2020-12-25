@@ -19,8 +19,11 @@ _install() {
             exit 1
             ;;
     esac
-
-    wget $dlurl -O /tmp/trackarr.tar.gz
+    echo_progress_start "Downloading trackarr and extracting"
+    if ! wget $dlurl -O /tmp/trackarr.tar.gz >> $log; then
+        echo_error "Failed to download"
+        exit 1
+    fi
     rm -rf /opt/trackarr
     mkdir -p /opt/trackarr
     tar -C /opt/trackarr -xzvf /tmp/trackarr.tar.gz
