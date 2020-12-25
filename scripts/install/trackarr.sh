@@ -4,7 +4,16 @@
 
 _install() {
     #todo get link dynamically
-    dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/c02643dedb5dfc19fceae8ebf3c254c8/trackarr_v1.8.1_linux_amd64.tar.gz"
+    case $(_os_arch) in
+        "amd64" | "arm64" | "arm")
+            dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/c02643dedb5dfc19fceae8ebf3c254c8/trackarr_v1.8.1_linux_$(_os_arch).tar.gz"
+            ;;
+        *)
+            echo_error "Arch not supported"
+            exit 1
+            ;;
+    esac
+
     wget $dlurl -O /tmp/trackarr.tar.gz
     rm -rf /opt/trackarr
     mkdir -p /opt/trackarr
