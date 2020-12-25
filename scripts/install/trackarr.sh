@@ -5,8 +5,14 @@
 _install() {
     #todo get link dynamically
     case $(_os_arch) in
-        "amd64" | "arm64" | "arm")
-            dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/c02643dedb5dfc19fceae8ebf3c254c8/trackarr_v1.8.1_linux_$(_os_arch).tar.gz"
+        "amd64")
+            dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/3495407ca9cf1297c37f0a9a0680516b/trackarr_v1.8.2_linux_amd64.tar.gz"
+            ;;
+        "arm64")
+            dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/87dfc6adf8747cfb9a086af4071d67f2/trackarr_v1.8.2_linux_arm64.tar.gz"
+            ;;
+        "arm")
+            dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/e07d9c2cc33ce1371e067945a6bd0f8f/trackarr_v1.8.2_linux_arm.tar.gz"
             ;;
         *)
             echo_error "Arch not supported"
