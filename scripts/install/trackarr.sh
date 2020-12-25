@@ -44,7 +44,15 @@ _nginx() {
         systemctl reload nginx
         echo_progress_done "Nginx configured"
     else
-        echo_info "trackarr will be running on port 7337"
+        if ! grep -q "user:" /opt/trackarr/config.yaml; then
+            #shellcheck source=sources/functions/utils
+            . /etc/swizzin/sources/functions/utils
+            user=$(_get_master_username)
+            pass=$(_get_user_password "$user")
+            sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
+            sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
+        fi
+        echo_info "trackarr will be running on port 7337 and protected by your master's credentials"
     fi
 }
 
