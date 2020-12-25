@@ -10,7 +10,7 @@ EOF
 . /etc/swizzin/sources/functions/utils
 master=$(_get_master_username)
 pass=$(_get_user_password "$master")
-sed -i "s|^baseurl: /$|baseurl: /trackarr |" /opt/trackarr/config.yaml
+sed -i "s|baseurl: /$|baseurl: /trackarr |" /opt/trackarr/config.yaml
 
 if ! grep -q "user:" /opt/trackarr/config.yaml; then
     sed -i "/^server:*/a \ \ user: $master" /opt/trackarr/config.yaml
