@@ -36,9 +36,13 @@ _install() {
 }
 
 _nginx() {
-    if [ -f "/install/.nginx.lock" ]; then
-        bash /etc/swizzin/scripts/nginx/trackarr.sh
+    if [[ -f /install/.nginx.lock ]]; then
+        echo_progress_start "Configuring nginx for trackarr"
+        /etc/swizzin/scripts/nginx/trackarr.sh
         systemctl reload nginx
+        echo_progress_done "Nginx configured"
+    else
+        echo_info "trackarr will be running on port 7337"
     fi
 }
 
@@ -96,7 +100,7 @@ EOF
 }
 
 _install
-# _nginx
+_nginx
 _arrconf
 
 touch /install/.trackarr.lock
