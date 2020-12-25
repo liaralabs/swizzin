@@ -102,7 +102,25 @@ EOF
 }
 
 function _systemd() {
-    :
+    echo_progress_start "Installing systemd service"
+    cat > /etc/systemd/system/trackarr.service << SYSD
+# Service file example for Trackarr
+[Unit]
+Description=Trackarr - an autodl for the modern human
+After=network.target
+
+[Service]
+User=trackarr
+ExecStart=/opt/trackarr/trackarr
+Restart=on-failure
+TimeoutSec=20
+
+[Install]
+WantedBy=multi-user.target
+SYSD
+    systemctl daemon-reload -q
+    systemctl enable -q --now trackarr 2>&1 | tee -a $log
+    echo_progress_done "Trackarr started"
 }
 
 _install
