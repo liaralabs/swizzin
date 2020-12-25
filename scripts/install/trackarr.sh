@@ -22,7 +22,8 @@ _install() {
             ;;
     esac
     echo_progress_start "Downloading trackarr and extracting"
-    if ! wget $dlurl -O /tmp/trackarr.tar.gz >> $log; then
+
+    if ! wget $dlurl -O /tmp/trackarr.tar.gz >> $log 2>&1; then
         echo_error "Failed to download"
         exit 1
     fi
@@ -33,7 +34,7 @@ _install() {
 
     useradd --system trackarr -d /opt/trackarr
     chown -R trackarr:trackarr /opt/trackarr
-    /opt/trackarr/trackarr >> $log
+    /opt/trackarr/trackarr >> $log 2>&1
 }
 
 _nginx() {
