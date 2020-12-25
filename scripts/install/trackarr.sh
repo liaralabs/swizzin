@@ -28,11 +28,12 @@ _install() {
     fi
     rm -rf /opt/trackarr
     mkdir -p /opt/trackarr
-    tar -C /opt/trackarr -xzvf /tmp/trackarr.tar.gz
+    tar -C /opt/trackarr -xzf /tmp/trackarr.tar.gz >> $log
+    echo_progress_done "Trackarr downloaded and extracted"
 
     useradd --system trackarr -d /opt/trackarr
     chown -R trackarr:trackarr /opt/trackarr
-    /opt/trackarr/trackarr
+    /opt/trackarr/trackarr >> $log
 }
 
 _nginx() {
@@ -99,9 +100,14 @@ EOF
     fi
 }
 
+function _systemd() {
+    :
+}
+
 _install
 _nginx
 _arrconf
+_systemd
 
 touch /install/.trackarr.lock
 echo_success "Trakarr installed"
