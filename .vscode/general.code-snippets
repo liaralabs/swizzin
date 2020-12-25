@@ -103,5 +103,18 @@
             "\techo_info \"${1:app} will run on port ${2:port}\"",
             "fi"
         ],
+    },
+    "Remove an nginx config": {
+        "scope": "shellscript",
+        "prefix": [
+            "nginxrm"
+        ],
+        "body": [
+            "if [[ -f /install/.nginx.lock ]]; then",
+            "\trm /etc/nginx/apps/${1:app}.conf",
+            "\tsystemctl nginx reload",
+            "fi",
+        ],
+        "description": "Adds a source to a swizzin function.\nPrepends the appropriate shellcheck declaration"
     }
 }
