@@ -95,10 +95,10 @@
         "prefix": "nginxconf",
         "body": [
             "if [[ -f /install/.nginx.lock ]]; then",
-            "\techo_progress_start \"Configuring nginx\"",
-            "\tbash /etc/swizzin/scripts/nginx/${1:app}.sh",
+            "\techo_progress_start \"Configuring nginx for ${1:app}\"",
+            "\t/etc/swizzin/scripts/nginx/${1:app}.sh",
             "\tsystemctl reload nginx",
-            "\techo_progress_done \"nginx configured\"",
+            "\techo_progress_done \"Nginx configured\"",
             "else",
             "\techo_info \"${1:app} will run on port ${2:port}\"",
             "fi"
@@ -112,7 +112,7 @@
         "body": [
             "if [[ -f /install/.nginx.lock ]]; then",
             "\trm /etc/nginx/apps/${1:app}.conf",
-            "\tsystemctl nginx reload",
+            "\tsystemctl reload nginx",
             "fi",
         ],
         "description": "Adds a source to a swizzin function.\nPrepends the appropriate shellcheck declaration"
