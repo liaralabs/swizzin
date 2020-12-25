@@ -11,7 +11,8 @@ EOF
 master=$(_get_master_username)
 pass=$(_get_user_password "$master")
 sed -i "s|^baseurl: /$|baseurl: /trackarr |" /opt/trackarr/config.yaml
-if ! grep -q user:; then
+
+if ! grep -q "user:" /opt/trackarr/config.yaml; then
     sed -i "/^server:*/a \ \ user: $master" /opt/trackarr/config.yaml
     sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
 fi
