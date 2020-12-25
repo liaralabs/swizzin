@@ -2,6 +2,8 @@
 
 #Trackarr installer
 
+pvryaml="/opt/trackarr/pvr.yaml"
+
 _install() {
     #todo get link dynamically
     case $(_os_arch) in
@@ -43,12 +45,12 @@ _nginx() {
 _arrconf() {
     if [[ -e /install/.sonarr.lock ]] || [[ -e /install/.sonarrv3.lock ]] || [[ -e /install/.radarr.lock ]] || [[ -e /install/.lidarr.lock ]]; then
         echo_progress_start "Adding arrs to the trackarr config"
-        touch /opt/trackarr/pvr.yaml
-        echo "pvr:" > /opt/trackarr/pvr.yaml
+        touch "$pvryaml"
+        echo "pvr:" > "$pvryaml"
         if [ -f /install/.sonarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/NzbDrone/config.xml)
-            cat >> /opt/trackarr/pvr.yaml << EOF
+            cat >> "$pvryaml" << EOF
 - name: sonarr
   url: http://127.0.0.1:8989
   apikey: $apikey
@@ -59,7 +61,7 @@ EOF
         if [ -f /install/.sonarrv3.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/sonarr/config.xml)
-            cat >> /opt/trackarr/pvr.yaml << EOF
+            cat >> "$pvryaml" << EOF
 - name: sonarr
   url: http://127.0.0.1:8989
   apikey: $apikey
@@ -70,7 +72,7 @@ EOF
         if [ -f /install/.radarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/Radarr/config.xml)
-            cat >> /opt/trackarr/pvr.yaml << EOF
+            cat >> "$pvryaml" << EOF
 - name: radarr
   url: http://127.0.0.1:7878
   apikey: $apikey
@@ -81,7 +83,7 @@ EOF
         if [ -f /install/.lidarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/Lidarr/config.xml)
-            cat >> /opt/trackarr/pvr.yaml << EOF
+            cat >> "$pvryaml" << EOF
 - name: lidarr
   url: http://127.0.0.1:8686
   apikey: $apikey
