@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+systemctl disable --now -q trackarr
+
 rm -rf /opt/trackarr
 userdel -rf trackarr
 
