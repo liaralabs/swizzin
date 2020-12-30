@@ -30,12 +30,6 @@ _install() {
     chown -R trackarr:trackarr /opt/trackarr
     /opt/trackarr/trackarr >> $log 2>&1
 
-    #shellcheck source=sources/functions/utils
-    . /etc/swizzin/sources/functions/utils
-    user=$(_get_master_username)
-    pass=$(_get_user_password "$user")
-    sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
-    sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
 }
 
 _nginx() {
@@ -45,6 +39,12 @@ _nginx() {
         systemctl reload nginx
         echo_progress_done "Nginx configured"
     else
+        #shellcheck source=sources/functions/utils
+        . /etc/swizzin/sources/functions/utils
+        user=$(_get_master_username)
+        pass=$(_get_user_password "$user")
+        sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
+        sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
         echo_info "trackarr will be running on port 7337 and protected by your master's credentials"
     fi
 }
