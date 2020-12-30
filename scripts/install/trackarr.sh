@@ -132,3 +132,4 @@ _systemd
 
 touch /install/.trackarr.lock
 echo_success "Trakarr installed"
+echo_info "Please make sure to configure your public domain in /opt/trackarr/config.yml, and set up your pvr.yaml according to the documentation here https://gitlab.com/cloudb0x/trackarr/-/wikis/Configuration/"
