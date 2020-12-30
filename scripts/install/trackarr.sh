@@ -29,6 +29,13 @@ _install() {
     useradd --system trackarr -d /opt/trackarr
     chown -R trackarr:trackarr /opt/trackarr
     /opt/trackarr/trackarr >> $log 2>&1
+
+    #shellcheck source=sources/functions/utils
+    . /etc/swizzin/sources/functions/utils
+    user=$(_get_master_username)
+    pass=$(_get_user_password "$user")
+    sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
+    sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
 }
 
 _nginx() {
@@ -38,14 +45,6 @@ _nginx() {
         systemctl reload nginx
         echo_progress_done "Nginx configured"
     else
-        if ! grep -q "user:" /opt/trackarr/config.yaml; then
-            #shellcheck source=sources/functions/utils
-            . /etc/swizzin/sources/functions/utils
-            user=$(_get_master_username)
-            pass=$(_get_user_password "$user")
-            sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
-            sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
-        fi
         echo_info "trackarr will be running on port 7337 and protected by your master's credentials"
     fi
 }
@@ -131,5 +130,5 @@ _arrconf
 _systemd
 
 touch /install/.trackarr.lock
-echo_success "Trakarr installed"
+echo_success "Trackarr installed"
 echo_info "Please make sure to configure your public domain in /opt/trackarr/config.yml, and set up your pvr.yaml according to the documentation here https://gitlab.com/cloudb0x/trackarr/-/wikis/Configuration/"
