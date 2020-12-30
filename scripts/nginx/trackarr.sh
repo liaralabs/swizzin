@@ -4,7 +4,8 @@
 user=$(_get_master_username)
 cat > /etc/nginx/apps/trackarr.conf << EOF
 location /trackarr/ {
-    proxy_pass              http://127.0.0.1:7337/trackarr;
+    proxy_pass              http://127.0.0.1:7337/trackarr/;
+    proxy_set_header        Host                    \$proxy_host;
     proxy_set_header        X-Forwarded-Host        \$http_host;
 }
 EOF
