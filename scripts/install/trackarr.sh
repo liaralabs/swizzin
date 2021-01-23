@@ -5,11 +5,11 @@
 pvryaml="/opt/trackarr/pvr.yaml"
 
 _install() {
-    #todo get link dynamically
+    trackarr_releases=$(curl -s "https://gitlab.com/api/v4/projects/cloudb0x%2Ftrackarr/releases/" | jq '.[0].assets.links[] | {url: .url} ')
     case $(_os_arch) in
-        "amd64") dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/3495407ca9cf1297c37f0a9a0680516b/trackarr_v1.8.2_linux_amd64.tar.gz" ;;
-        "arm64") dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/87dfc6adf8747cfb9a086af4071d67f2/trackarr_v1.8.2_linux_arm64.tar.gz" ;;
-        "armhf") dlurl="https://gitlab.com/cloudb0x/trackarr/uploads/e07d9c2cc33ce1371e067945a6bd0f8f/trackarr_v1.8.2_linux_arm.tar.gz" ;;
+        "amd64") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_amd64"))|.url') ;;
+        "arm64") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_arm64"))|.url') ;;
+        "armhf") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_armhf"))|.url') ;;
         *)
             echo_error "Arch not supported"
             exit 1
