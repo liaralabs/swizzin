@@ -474,9 +474,11 @@ function _chpasswd() {
         qbittorrent_chpasswd "${user}" "${pass}"
     fi
     if [[ -f /install/.trackarr.lock ]]; then
-        # qbittorrent_chpasswd ${user} ${pass}
-        sed -i "s/pass: .*/pass: $pass/" /opt/trackarr/config.yaml
-        systemctl restart trackarr
+        if [ ! -f /install/.nginx.lock ]; then
+            # qbittorrent_chpasswd ${user} ${pass}
+            sed -i "s/pass: .*/pass: $pass/" /opt/trackarr/config.yaml
+            systemctl restart trackarr
+        fi
     fi
     echo_success "Password for $user changed"
     pass=""
