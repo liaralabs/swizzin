@@ -17,8 +17,8 @@ location /trackarr/ {
 EOF
 
 # Prevent double-basic-auth req if nginx was installed after trackarr
-sed -i '/user:/d' /opt/trackarr/config.yaml
-sed -i '/pass:/d' /opt/trackarr/config.yaml
+# sed -i '/user:/d' /opt/trackarr/config.yaml
+# sed -i '/pass:/d' /opt/trackarr/config.yaml
 
 sed -i "s|baseurl: /$|baseurl: /trackarr|" /opt/trackarr/config.yaml
 sed -i "s|host: 0.0.0.0|host: 127.0.0.1|" /opt/trackarr/config.yaml
