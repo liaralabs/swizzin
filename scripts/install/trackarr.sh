@@ -5,11 +5,14 @@
 pvryaml="/opt/trackarr/pvr.yaml"
 
 _install() {
-    trackarr_releases=$(curl -s "https://gitlab.com/api/v4/projects/cloudb0x%2Ftrackarr/releases/" | jq '.[0].assets.links[] | {url: .url} ')
+    trackarr_releases=$(curl -s "https://gitlab.com/api/v4/projects/cloudb0x%2Ftrackarr/releases/" | jq '.[0].assets.links[] | {url: .url} ') || {
+        echo_error "Failed to query GitLab"
+        exit 1
+    }
     case $(_os_arch) in
-        "amd64") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_amd64"))|.url') ;;
-        "arm64") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_arm64"))|.url') ;;
-        "armhf") dlurl=$(echo ${trackarr_releases} | jq '.|select(.url | contains("linux_armhf"))|.url') ;;
+        "amd64") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_amd64"))|.url')" ;;
+        "arm64") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_arm64"))|.url')" ;;
+        "armhf") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_armhf"))|.url')" ;;
         *)
             echo_error "Arch not supported"
             exit 1
