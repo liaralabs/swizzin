@@ -59,22 +59,6 @@
         ],
         "body": "echo_info \"${1:message}\""
     },
-    "Echo error": {
-        "scope": "shellscript",
-        "prefix": [
-            "echo_error",
-            "error"
-        ],
-        "body": "echo_error \"${1:message}\""
-    },
-    "Echo warn": {
-        "scope": "shellscript",
-        "prefix": [
-            "echo_warn",
-            "warn"
-        ],
-        "body": "echo_warn \"${1:message}\""
-    },
     "Echo log_only": {
         "scope": "shellscript",
         "prefix": [
