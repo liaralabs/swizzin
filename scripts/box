@@ -286,6 +286,7 @@ function _adduser() {
         if [[ -f /install/.${app}.lock ]]; then
             if [[ $app = "flood" ]]; then
                 /usr/local/bin/swizzin/install/${app}.sh
+                echo_info "Please create the flood user for $user manually"
             else
                 /usr/local/bin/swizzin/install/${app}.sh ${user}
                 if [[ $app = "deluge" ]]; then
@@ -305,7 +306,7 @@ function _adduser() {
 
     USER=${user^^}
     cat > /etc/sudoers.d/${user} << SUD
-Cmnd_Alias   ${USER}CMDS = /bin/systemctl stop flood@${user}, /bin/systemctl restart flood@${user}, /bin/systemctl start flood@${user}, /bin/systemctl start rtorrent@${user}, /bin/systemctl stop rtorrent@${user}, /bin/systemctl restart rtorrent@${user}, /bin/systemctl start deluged@${user}, /bin/systemctl stop deluged@${user}, /bin/systemctl restart deluged@${user}, /bin/systemctl start deluge-web@${user}, /bin/systemctl stop deluge-web@${user}, /bin/systemctl restart deluge-web@${user}, /bin/systemctl start irssi@${user}, /bin/systemctl stop irssi@${user}, /bin/systemctl restart irssi@${user}, /bin/systemctl start qbittorrent@${user}, /bin/systemctl stop qbittorrent@${user}, /bin/systemctl restart qbittorrent@${user}, /usr/local/bin/swizzin/box chpasswd ${user}
+Cmnd_Alias   ${USER}CMDS = /bin/systemctl /bin/systemctl start rtorrent@${user}, /bin/systemctl stop rtorrent@${user}, /bin/systemctl restart rtorrent@${user}, /bin/systemctl start deluged@${user}, /bin/systemctl stop deluged@${user}, /bin/systemctl restart deluged@${user}, /bin/systemctl start deluge-web@${user}, /bin/systemctl stop deluge-web@${user}, /bin/systemctl restart deluge-web@${user}, /bin/systemctl start irssi@${user}, /bin/systemctl stop irssi@${user}, /bin/systemctl restart irssi@${user}, /bin/systemctl start qbittorrent@${user}, /bin/systemctl stop qbittorrent@${user}, /bin/systemctl restart qbittorrent@${user}, /usr/local/bin/swizzin/box chpasswd ${user}
 
 ${user}     ALL = (ALL) NOPASSWD: ${USER}CMDS
 SUD
@@ -335,7 +336,7 @@ function _deluser() {
     echo_query "Press enter to continue, or CTRL+C to cancel"
     read -rep ''
 
-    for app in rtorrent rutorrent deluge autodl flood nzbget lounge transmission mango wireguard organizr qbittorrent; do
+    for app in rtorrent rutorrent deluge autodl nzbget lounge transmission mango wireguard organizr qbittorrent; do
         if [[ $app = "rutorrent" ]]; then
             if [[ -d /srv/rutorrent ]]; then
                 if [[ ! -f /install/.rutorrent.lock ]]; then touch /install/.rutorrent.lock; fi

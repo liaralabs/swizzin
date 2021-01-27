@@ -2,70 +2,76 @@
 # Flood for rtorrent installation script for swizzin
 # Author: liara
 
-if [[ ! -f /install/.rtorrent.lock ]]; then
-    echo_error "Flood is a GUI for rTorrent, which doesn't appear to be installed. Exiting."
-    exit 1
-fi
-#shellcheck source=sources/functions/npm
-. /etc/swizzin/sources/functions/npm
-npm_install
+_install() {
 
-if [[ ! $(which node-gyp) ]]; then
-    echo_progress_start "Installing node-gyp"
-    npm install -g node-gyp >> $log 2>&1
-    echo_progress_done
-fi
+    #shellcheck source=sources/functions/npm
+    . /etc/swizzin/sources/functions/npm
+    npm_install
 
-cat > /etc/systemd/system/flood@.service << SYSDF
+    sudo useradd --create-home --shell /bin/false flood -d /opt/flood
+    echo_progress_start "Installing flood"
+    npm install --global flood >> "$log" 2>&1
+    echo_progress_done "Flood installed"
+
+}
+
+_systemd() {
+    cat > /etc/systemd/system/flood.service << EOF
 [Unit]
-Description=Flood rTorrent Web UI
+Description=Flood Web UI
 After=network.target
 
 [Service]
-User=%i
-Group=%i
-WorkingDirectory=/home/%i/.flood
-ExecStart=/usr/bin/npm start --production /home/%i/.flood
-
+WorkingDirectory=~
+ExecStart=/usr/bin/flood -p 3006
+User=flood
 
 [Install]
 WantedBy=multi-user.target
-SYSDF
+EOF
+    systemctl enable flood --now -q
+}
 
-users=($(cut -d: -f1 < /etc/htpasswd))
-for u in "${users[@]}"; do
-    if [[ ! -d /home/$u/.flood ]]; then
-        echo_progress_start "Configuring flood for $u"
-        salt=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
-        port=$(shuf -i 3501-4500 -n 1)
-        cd /home/$u
-        echo_progress_start "Cloning source code"
-        git clone https://github.com/jfurrow/flood.git .flood >> $log 2>&1
-        echo_progress_done "Source cloned"
-        chown -R $u: .flood
-        cd .flood
-        cp -a config.template.js config.js
-        sed -i "s/floodServerPort: 3000/floodServerPort: $port/g" config.js
-        sed -i "s/socket: false/socket: true/g" config.js
-        sed -i "s/socketPath.*/socketPath: '\/var\/run\/${u}\/.rtorrent.sock'/g" config.js
-        sed -i "s/secret: 'flood'/secret: '$salt'/g" config.js
-        if [[ ! -f /install/.nginx.lock ]]; then
-            sed -i "s/floodServerHost: '127.0.0.1'/floodServerHost: '0.0.0.0'/g" config.js
-        fi
-        echo_progress_start "Building Flood for $u. This might take some time..."
-        su - $u -c "cd /home/$u/.flood; npm install" >> $log 2>&1
-        echo_progress_done "Flood built for $u"
-        if [[ ! -f /install/.nginx.lock ]]; then
-            su - $u -c "cd /home/$u/.flood; npm run build" >> $log 2>&1
-            systemctl start flood@$u
-            echo_info "Flood port for $u is $port"
-        elif [[ -f /install/.nginx.lock ]]; then
-            bash /usr/local/bin/swizzin/nginx/flood.sh $u
-            systemctl start flood@$u
-        fi
-        systemctl enable -q flood@$u 2>&1 | tee -a $log
-        echo_progress_done "Flood for $u configured"
+_nginx() {
+    if [[ -f /install/.nginx.lock ]]; then
+        echo_progress_start "Configuring nginx"
+        bash /etc/swizzin/scripts/nginx/flood.sh
+        systemctl reload nginx
+        echo_progress_done "nginx configured"
+    else
+        sed '/ExecStart=/ s/$/ --host=0.0.0.0' -i /etc/systemd/system/flood.service
+        echo_info "Flood will run on port 3006"
     fi
+}
+
+_permissions() {
+    usermod -a -G "$user" flood
+    # TODO check socket permissions again
+}
+
+if [[ -n $1 ]]; then
+    echo_progress_start "Giving flood permissions to $user dir"
+    user=$1
+    _permissions
+    echo_progress_done "Done"
+    echo_info "Please create the flood account for $user manually"
+    exit 0
+fi
+
+_install
+_systemd
+_nginx
+#shellcheck source=sources/functions/utils
+. /etc/swizzin/sources/functions/utils
+
+readarray -t users < <(_get_user_list)
+for user in "${users[@]}"; do
+    echo_progress_start "Giving flood permissions to $user dir"
+    _permissions
+    echo_progress_done "Done"
+    echo_info "Please create the flood account for $user manually"
 done
+
 echo_success "Flood installed"
+echo_info "Please finish the setup of flood in the browser"
 touch /install/.flood.lock
