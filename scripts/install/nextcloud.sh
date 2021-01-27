@@ -13,218 +13,167 @@
 #   including (via compiler) GPL-licensed code must also be made available
 #   under the GPL along with build & install instructions.
 
-inst=$(which mysql)
-ip=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
 if [[ ! -f /install/.nginx.lock ]]; then
-    echo_error "Web server not detected. Please install nginx and restart panel install."
+    echo_error "Nginx not detected. Please install nginx and restart panel install."
     exit 1
-else
-    echo_query "Please choose a password for the nextcloud mysql user." "hidden"
-    read -s 'nextpass'
-    echo
-    #Check for existing mysql and install if not found
-    if [[ -n $inst ]]; then
-        echo_warn "Existing mysql server detected!"
-        echo_query "Please enter mysql root password so that installation may continue." "hidden"
-        read -s 'password'
-        echo
-    else
-        while [ -z "$password" ]; do
-            echo_query "Please enter a mysql root password" "hidden"
-            read -s 'pass1'
-            echo_query "Re-enter password to verify" "hidden"
-            read -s 'pass2'
-            if [ $pass1 = $pass2 ]; then
-                password=$pass1
-            else
-                echo_warn "Passwords do not match"
-            fi
-        done
-        echo_progress_start "Installing database"
-        apt_install mariadb-server
-        if [[ $(systemctl is-active mysql) != "active" ]]; then
-            systemctl start mysql
-        fi
-        mysqladmin -u root password ${password}
-        echo_progress_done "Database installed"
-    fi
-    #Depends
-    apt_install unzip php-mysql libxml2-dev php-common php-gd php-json php-curl php-zip php-xml php-mbstring
-    #a2enmod rewrite > /dev/null 2>&1
-    cd /tmp
+fi
 
-    #Nextcloud 16 no longer supports php7.0, so 15 is the last supported release for Debian 9
+function _db_setup() {
+    #Check for existing mysql and install if not found
+    if ! which mysql >> /dev/null; then
+        apt_install mariadb-server
+        systemctl enable --now mysql -q
+    fi
+
+    if [[ -z $nextcldMySqlPW ]]; then
+        nextcldMySqlPW=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c16)
+        echo_log_only "Nextcloud DB password = $nextcldMySqlPW"
+    fi
+
+    # BIG TODO HERE https://docs.nextcloud.com/server/18/admin_manual/configuration_database/mysql_4byte_support.html
+    echo_progress_start "Setting up DB for Nextcloud"
+    mysql --execute="CREATE DATABASE nextcloud character set UTF8mb4 COLLATE utf8mb4_general_ci;" || exit 1
+    mysql --execute="CREATE USER nextcloud@localhost IDENTIFIED BY '$nextcldMySqlPW';" || exit 1
+    mysql --execute="GRANT ALL PRIVILEGES ON nextcloud.* TO nextcloud@localhost;" || exit 1
+    # mysql --execute="SET GLOBAL innodb_file_format=Barracuda;"
+    mysql --execute="FLUSH PRIVILEGES;"
+
+    if ! grep -Fxq innodb_file_per_table=1 /etc/mysql/my.cnf; then
+        echo_log_only "Fixing innodb file per table"
+        if ! grep -Fxq '[mysqld]' /etc/mysql/my.cnf; then
+            cat >> /etc/mysql/my.cnf << EOF
+[mysqld]
+innodb_file_per_table=1
+EOF
+        else
+            sed '/^[mysqld]/a innodb_file_per_table=1' /etc/mysql/my.cnf
+        fi
+    fi
+    echo_progress_done "DB Set up"
+    systemctl restart mysqld
+}
+
+function _install() {
+    #Depends
+    apt_install unzip php-mysql libxml2-dev php-common php-gd php-json php-curl php-zip php-xml php-mbstring php-intl php-bcmath php-gmp php-imagick # php-apcu
+
     echo_progress_start "Downloading and extracting Nextcloud"
     codename=$(lsb_release -cs)
-    if [[ $codename =~ ("stretch"|"xenial") ]]; then
+    if [[ $codename =~ ("stretch"|"xenial") ]]; then # TODO switch to PHP check instead
+        echo_info "Switching to Nextcloud 15 due to an outdated version of PHP set by the OS"
         version="nextcloud-$(curl -s https://nextcloud.com/changelog/ | grep -A5 '"latest15"' | grep 'id=' | cut -d'"' -f2 | sed 's/-/./g')"
     else
         version=latest
     fi
-    wget -q https://download.nextcloud.com/server/releases/${version}.zip > /dev/null 2>&1
-    unzip ${version}.zip > /dev/null 2>&1
-    mv nextcloud /srv
-    rm -rf /tmp/${version}.zip
-    echo_progress_done "Nextcloud extracted"
+    # TODO switch to tar.bz2 and curl?
+    wget -q https://download.nextcloud.com/server/releases/${version}.zip -nc -O /tmp/nextcloud.zip >> "$log" 2>&1
+    echo_progress_done "Downloaded"
+
+    echo_progress_start "Extracting nextcloud"
+    unzip -q /tmp/nextcloud.zip -d /srv >> "$log" 2>&1
+    echo_progress_done "Extracted"
 
     #Set permissions as per nextcloud
     echo_progress_start "Configuring permissions"
     ocpath='/srv/nextcloud'
     htuser='www-data'
     htgroup='www-data'
-    rootuser='root'
 
-    mkdir -p $ocpath/data
-    mkdir -p $ocpath/assets
-    mkdir -p $ocpath/updater
+    mkdir -p $ocpath/{data,assets,updater}
     find ${ocpath}/ -type f -print0 | xargs -0 chmod 0640
     find ${ocpath}/ -type d -print0 | xargs -0 chmod 0750
-    chown -R ${rootuser}:${htgroup} ${ocpath}/
-    chown -R ${htuser}:${htgroup} ${ocpath}/apps/
-    chown -R ${htuser}:${htgroup} ${ocpath}/assets/
-    chown -R ${htuser}:${htgroup} ${ocpath}/config/
-    chown -R ${htuser}:${htgroup} ${ocpath}/data/
-    chown -R ${htuser}:${htgroup} ${ocpath}/themes/
-    chown -R ${htuser}:${htgroup} ${ocpath}/updater/
+    chown -R root:${htgroup} ${ocpath}/
+    chown -R ${htuser}:${htgroup} ${ocpath}/{apps,assets,config,data,themes,updater}
     chmod +x ${ocpath}/occ
     if [ -f ${ocpath}/.htaccess ]; then
         chmod 0644 ${ocpath}/.htaccess
-        chown ${rootuser}:${htgroup} ${ocpath}/.htaccess
+        chown root:${htgroup} ${ocpath}/.htaccess
     fi
     if [ -f ${ocpath}/data/.htaccess ]; then
         chmod 0644 ${ocpath}/data/.htaccess
-        chown ${rootuser}:${htgroup} ${ocpath}/data/.htaccess
+        chown root:${htgroup} ${ocpath}/data/.htaccess
     fi
     echo_progress_done "Permissions set"
 
-    echo_progress_start "Configuring nginx and php"
-    . /etc/swizzin/sources/functions/php
-    phpversion=$(php_service_version)
-    sock="php${phpversion}-fpm"
-
-    cat > /etc/nginx/apps/nextcloud.conf << EOF
-# The following 2 rules are only needed for the user_webfinger app.
-# Uncomment it if you're planning to use this app.
-#rewrite ^/.well-known/host-meta /nextcloud/public.php?service=host-meta last;
-#rewrite ^/.well-known/host-meta.json /nextcloud/public.php?service=host-meta-json last;
-
-# The following rule is only needed for the Social app.
-# Uncomment it if you're planning to use this app.
-#rewrite ^/.well-known/webfinger /nextcloud/public.php?service=webfinger last;
-
-location = /.well-known/carddav {
-  return 301 \$scheme://\$host:\$server_port/nextcloud/remote.php/dav;
-}
-location = /.well-known/caldav {
-  return 301 \$scheme://\$host:\$server_port/nextcloud/remote.php/dav;
-}
-
-location /.well-known/acme-challenge { }
-
-location ^~ /nextcloud {
-
-    # set max upload size
-    client_max_body_size 512M;
-    fastcgi_buffers 64 4K;
-
-    # Enable gzip but do not remove ETag headers
-    gzip on;
-    gzip_vary on;
-    gzip_comp_level 4;
-    gzip_min_length 256;
-    gzip_proxied expired no-cache no-store private no_last_modified no_etag auth;
-    gzip_types application/atom+xml application/javascript application/json application/ld+json application/manifest+json application/rss+xml application/vnd.geo+json application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/bmp image/svg+xml image/x-icon text/cache-manifest text/css text/plain text/vcard text/vnd.rim.location.xloc text/vtt text/x-component text/x-cross-domain-policy;
-
-    # Uncomment if your server is build with the ngx_pagespeed module
-    # This module is currently not supported.
-    #pagespeed off;
-
-    location /nextcloud {
-        rewrite ^ /nextcloud/index.php;
-    }
-
-    location ~ ^\/nextcloud\/(?:build|tests|config|lib|3rdparty|templates|data)\/ {
-        deny all;
-    }
-    location ~ ^\/nextcloud\/(?:\.|autotest|occ|issue|indie|db_|console) {
-        deny all;
-    }
-
-    location ~ ^\/nextcloud\/(?:index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+)\.php(?:\$|\/) {
-        fastcgi_split_path_info ^(.+?\.php)(\/.*|)\$;
-        set \$path_info \$fastcgi_path_info;
-        try_files \$fastcgi_script_name =404;
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        fastcgi_param PATH_INFO \$path_info;
-        fastcgi_param HTTPS on;
-        # Avoid sending the security headers twice
-        fastcgi_param modHeadersAvailable true;
-        # Enable pretty urls
-        fastcgi_param front_controller_active true;
-        fastcgi_pass unix:/run/php/$sock.sock;
-        fastcgi_intercept_errors on;
-        fastcgi_request_buffering off;
-    }
-
-    location ~ ^\/nextcloud\/(?:updater|oc[ms]-provider)(?:\$|\/) {
-        try_files \$uri/ =404;
-        index index.php;
-    }
-
-    # Adding the cache control header for js, css and map files
-    # Make sure it is BELOW the PHP block
-    location ~ ^\/nextcloud\/.+[^\/]\.(?:css|js|woff2?|svg|gif|map)\$ {
-        try_files \$uri /nextcloud/index.php\$request_uri;
-        add_header Cache-Control "public, max-age=15778463";
-        # Add headers to serve security related headers  (It is intended
-        # to have those duplicated to the ones above)
-        # Before enabling Strict-Transport-Security headers please read
-        # into this topic first.
-        #add_header Strict-Transport-Security "max-age=15768000; includeSubDomains; preload;" always;
-        #
-        # WARNING: Only add the preload option once you read about
-        # the consequences in https://hstspreload.org/. This option
-        # will add the domain to a hardcoded list that is shipped
-        # in all major browsers and getting removed from this list
-        # could take several months.
-        add_header Referrer-Policy "no-referrer" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-Download-Options "noopen" always;
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Permitted-Cross-Domain-Policies "none" always;
-        add_header X-Robots-Tag "none" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-
-        # Optional: Don't log access to assets
-        access_log off;
-    }
-
-    location ~ ^\/nextcloud\/.+[^\/]\.(?:png|html|ttf|ico|jpg|jpeg|bcmap)\$ {
-        try_files \$uri /nextcloud/index.php\$request_uri;
-        # Optional: Don't log access to other assets
-        access_log off;
-    }
-}
-EOF
-    echo_progress_done
-
-    echo_progress_start "Configuring database"
-    mysql --user="root" --password="$password" --execute="CREATE DATABASE nextcloud;"
-    mysql --user="root" --password="$password" --execute="CREATE USER nextcloud@localhost IDENTIFIED BY '$nextpass';"
-    mysql --user="root" --password="$password" --execute="GRANT ALL PRIVILEGES ON nextcloud.* TO nextcloud@localhost;"
-    mysql --user="root" --password="$password" --execute="FLUSH PRIVILEGES;"
-    echo_progress_done "Database configured"
-
-    echo_progress_start "Restarting nginx"
-    systemctl reload nginx
-    echo_progress_start "nginx restarted"
+    # echo "Installing cron jobs"
+    crontab -l -u $htuser > /tmp/newcron.txt
+    echo "*/5  *  *  *  * php -f /var/www/nextcloud/" >> /tmp/newcron.txt
+    crontab -u $htuser /tmp/newcron.txt
+    rm /tmp/newcron.txt
 
     touch /install/.nextcloud.lock
-    echo_success "Nextcloud installed"
 
-    echo_info "Visit https://${ip}/nextcloud to finish installation."
-    echo_info "Database user: nextcloud"
-    echo_info "Database password: ${nextpass}"
-    echo_info "Database name: nextcloud"
+}
+
+function _nginx() {
+    echo_progress_start "Configuting nginx and PHP"
+    bash /etc/swizzin/scripts/nginx/nextcloud.sh
+    systemctl reload nginx
+    echo_progress_done "nginx and PHP setup"
+}
+
+function _bootstrap() {
+    echo_progress_start "Configuring Nextcloud settings"
+
+    _occ "maintenance:install -n --database 'mysql' --database-name 'nextcloud'  --database-user 'nextcloud' --database-pass '$nextcldMySqlPW' --admin-user '$masteruser' --admin-pass '$masterpass' " -q
+    _occ "maintenance:mode --on -n" -q
+    _occ "db:add-missing-indices-n " -q
+    _occ "db:convert-filecache-bigint --no-interaction -n" -q
+    # _occ "config:system:set memcache.local --value='\OC\Memcache\APCu" -q # TODO follow https://github.com/nextcloud/server/issues/24567
+
+    _occ_add_trusted_domain "localhost" >> $log
+    _occ_add_trusted_domain "$(hostname)" >> $log
+    _occ_add_trusted_domain "$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')" >> $log
+    for value in $(grep server_name /etc/nginx/sites-enabled/default | cut -d' ' -f 4 | cut -d\; -f 1); do
+        if [[ $value != "_" ]]; then
+            _occ_add_trusted_domain "$(value)" >> $log
+        fi
+    done
+    #All users but the master user
+
+    _occ "maintenance:mode --off" -q
+    restart_php_fpm
+    systemctl restart nginx
+    echo_progress_done "Nextcloud configured"
+}
+
+function _users() {
+    for u in "${users[@]}"; do
+        echo_progress_start "Adding $u to Nextcloud"
+        OC_PASS=$(_get_user_password "$u")
+        export OC_PASS
+        #TODO decide what happens wih the stdout from this
+        if ! _occ "user:add --password-from-env --display-name=${u} --group='users' ${u}" -q; then
+            echo_error "Error adding user"
+            exit 1
+        fi
+        unset OC_PASS
+        echo_progress_done "$u added to nextcloud"
+    done
+}
+
+# shellcheck source=sources/functions/utils
+. /etc/swizzin/sources/functions/utils
+# shellcheck source=sources/functions/nextcloud
+. /etc/swizzin/sources/functions/nextcloud
+# shellcheck source=sources/functions/php
+. /etc/swizzin/sources/functions/php
+
+masteruser=$(_get_master_username)
+masterpass=$(_get_user_password "$masteruser")
+
+if [[ -n $1 ]]; then
+    users=("$1")
+    _users
+    exit 0
 fi
+
+_install
+_db_setup
+_nginx
+_bootstrap
+readarray -t users < <(_get_user_list | sed "/^$masteruser\b/Id")
+_users
+
+echo_success "Nextcloud installed"
+echo_info "Please log in using your master credentials."

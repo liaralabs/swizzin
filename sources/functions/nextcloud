@@ -1,0 +1,24 @@
+#! /bin/bash
+# flying_sausages 2020 for swizzin
+# Some stuff for nextcloud
+
+#Passes a command to the nextcloud OCC command
+function _occ() {
+    torun="$1"
+    quiet="$2"
+    echo_log_only "Passing \"${torun}\" to occ"
+    if [[ $quiet = "-q" ]]; then
+        su -s /bin/sh www-data -c "php /srv/nextcloud/occ ${torun}" >> "$log" 2>&1
+    else
+        su -s /bin/sh www-data -c "php /srv/nextcloud/occ ${torun}" | tee -a "$log"
+    fi
+}
+
+#adds a domain at the end of the trusted domain array in Nextcloud
+function _occ_add_trusted_domain() {
+    domain="$1"
+    echo_log_only "Adding $domain to Nextcloud"
+    count=$(_occ "config:system:get trusted_domains" | wc -l)
+    ((count += 1))
+    _occ "config:system:set trusted_domains ${count} --value=${domain}" -q >> $log 2>&1
+}

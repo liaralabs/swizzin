@@ -264,7 +264,7 @@ function _adduser() {
     echo "D /var/run/${user} 0750 ${user} ${user} -" >> /etc/tmpfiles.d/${user}.conf
     systemd-tmpfiles /etc/tmpfiles.d/${user}.conf --create >> $log 2>&1
 
-    for app in rtorrent rutorrent deluge autodl flood nzbget lounge transmission wireguard organizr mango qbittorrent; do
+    for app in rtorrent rutorrent deluge autodl flood nzbget lounge transmission nextcloud wireguard organizr mango qbittorrent; do
         if [[ $app = "rutorrent" ]]; then
             if [[ -d /srv/rutorrent ]]; then
                 if [[ ! -f /install/.rutorrent.lock ]]; then touch /install/.rutorrent.lock; fi
@@ -280,8 +280,8 @@ function _adduser() {
                     app="{deluged,deluge-web}"
                     eval systemctl enable -q ${app}@${user}
                     eval systemctl start ${app}@${user}
-                elif [[ $app =~ ("rutorrent"|"lounge"|"organizr"|"mango"|"wireguard") ]]; then
-                    : #Multi-user app without user service files. wireguard interface is started in wg script
+                elif [[ $app =~ ("rutorrent"|"lounge"|"organizr"|"mango"|"wireguard"|"nextcloud") ]]; then
+                    : # Multi-user app without user service files. wireguard interface is started in wg script
                 else
                     if [[ $app = "autodl" ]]; then app=irssi; fi
                     systemctl enable -q ${app}@${user}
@@ -331,7 +331,7 @@ function _deluser() {
     echo_warn "This will delete the user '${user}' and all associated configs and subdirectories.\nTHIS ACTION CANNOT BE UNDONE.\nRemoval will start as soon as you confirm this message."
     ask "Are you sure you want to continue?" N || exit 1
 
-    for app in rtorrent rutorrent deluge autodl flood nzbget lounge transmission mango wireguard organizr qbittorrent; do
+    for app in rtorrent rutorrent deluge autodl flood nzbget lounge transmission mango nextcloud wireguard organizr qbittorrent; do
         if [[ $app = "rutorrent" ]]; then
             if [[ -d /srv/rutorrent ]]; then
                 if [[ ! -f /install/.rutorrent.lock ]]; then touch /install/.rutorrent.lock; fi
@@ -343,6 +343,10 @@ function _deluser() {
                 rm -rf /srv/rutorrent/conf/users/${user}
                 rm -rf /srv/rutorrent/share/users/${user}
                 rm -f /etc/nginx/apps/${user}*
+            elif [[ $app = "nextcloud" ]]; then
+                # shellcheck source=sources/functions/nextcloud
+                . /etc/swizzin/sources/functions/nextcloud
+                _occ "user:delete ${user}" -q
             elif [[ $app = "lounge" ]]; then
                 su -s /bin/sh lounge -c "thelounge remove ${user}" > /dev/null
             elif [[ $app = "mango" ]]; then
@@ -420,6 +424,14 @@ function _chpasswd() {
         sed -i "s/.*rpc-password.*/  \"rpc-password\": \"${pass}\",/" /home/$user/.config/transmission-daemon/settings.json
         systemctl start transmission@${user} >> $log 2>&1
     fi
+    if [[ -e /install/.nextcloud.lock ]]; then
+        # shellcheck source=sources/functions/nextcloud
+        . /etc/swizzin/sources/functions/nextcloud
+        export OC_PASS="$pass"
+        _occ "user:resetpassword $user --password-from-env" -q
+        unset OC_PASS
+    fi
+
     if [[ -f /install/.lounge.lock ]]; then
         su -s /bin/sh lounge -c "thelounge reset $user " <<< "${pass}" >> $log 2>&1
     fi

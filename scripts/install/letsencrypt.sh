@@ -176,6 +176,14 @@ if [[ -f /install/.vsftpd.lock ]]; then
     systemctl restart vsftpd
 fi
 
+if [[ -f /install/.nextcloud.lock ]]; then
+    echo_progress_start "Adding $hostname to Nextcloud"
+    #shellcheck source=sources/functions/nextcloud
+    . /etc/swizzin/sources/functions/nextcloud
+    _occ_add_trusted_domain "$hostname"
+    echo_progress_done "Domain added to Nextcloud"
+fi
+
 systemctl reload nginx
 
 echo_success "Letsencrypt installed"

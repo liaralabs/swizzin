@@ -80,11 +80,19 @@ response=$(cat $duckLog)
 if [ "$response" != "OK" ]; then
     echo_error "Duck DNS did not update correctly. Please check your settings or run the setup again."
     exit 1
-else
-    echo_progress_done
-    echo_success "Duck DNS setup succesfully completed!"
-    if [[ ! -f /install/.nginx.lock ]]; then
-        echo_info "Install LetsEncrypt using the domain \"$subdomain.duckdns.org\" to get SSL encryption\nConsult https://swizzin.ltd/docs/guides/troubleshooting for help with port forwarding."
-    fi
-    touch /install/.duckdns.lock
 fi
+echo_progress_done
+
+if [[ -f /install/.nextcloud.lock ]]; then
+    echo_progress_start "Adding $domain to Nextcloud"
+    #shellcheck source=sources/functions/nextcloud
+    . /etc/swizzin/sources/functions/nextcloud
+    _occ_add_trusted_domain "$domain"
+    echo_progress_done "Domain added to Nextcloud"
+fi
+
+echo_success "Duck DNS setup succesfully completed!"
+if [[ ! -f /install/.nginx.lock ]]; then
+    echo_info "Install LetsEncrypt using the domain \"$subdomain.duckdns.org\" to get SSL encryption\nConsult https://swizzin.ltd/docs/guides/troubleshooting for help with port forwarding."
+fi
+touch /install/.duckdns.lock
