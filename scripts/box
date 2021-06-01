@@ -487,6 +487,7 @@ _run_tests() {
         . /etc/swizzin/sources/functions/utils
         readarray -t list < <(_get_installed_apps)
         echo_info "Tests to run: ${list[*]}"
+        echo
     fi
 
     export bell=false
@@ -625,5 +626,7 @@ case "$1" in
 esac
 
 if [[ $runtests == "true" ]]; then
+    echo
+    echo_warn "We determined you're not in a \"normal\" environment, therefore we're running tests"
     _run_tests
 fi
