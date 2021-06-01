@@ -124,6 +124,15 @@ function _clr() {
 
 #shellcheck disable=SC2120
 function _update() {
+
+    branch_name="$(git symbolic-ref HEAD 2> /dev/null)" || branch_name="(unnamed branch)" # detached HEAD
+    branch_name=${branch_name##refs/heads/}
+    if [ "$branch_name" == "develop" ]; then
+        SWIZ_GIT_REF="develop"
+        export SWIZ_GIT_REF
+        echo_info "Just FYI, you're on the develop branch! Remember that you need to mention this when asking for any sort of support."
+    fi
+
     case "$(_os_codename)" in
         "bionic" | "focal" | "buster" | "stretch")
             echo_log_only "OS supported"
