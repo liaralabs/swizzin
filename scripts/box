@@ -125,14 +125,6 @@ function _clr() {
 #shellcheck disable=SC2120
 function _update() {
 
-    branch_name="$(git symbolic-ref HEAD 2> /dev/null)" || branch_name="(unnamed branch)" # detached HEAD
-    branch_name=${branch_name##refs/heads/}
-    if [ "$branch_name" == "develop" ]; then
-        SWIZ_GIT_REF="develop"
-        export SWIZ_GIT_REF
-        echo_info "Just FYI, you're on the develop branch! Remember that you need to mention this when asking for any sort of support."
-    fi
-
     case "$(_os_codename)" in
         "bionic" | "focal" | "buster" | "stretch")
             echo_log_only "OS supported"
@@ -147,13 +139,8 @@ We URGE you to migrate to a supported release if/while you still have the chance
             ;;
     esac
 
-    if [[ -L /etc/swizzin ]]; then
-        echo_warn "Not updating /etc/swizzin as it is a symlink. Please consult your provider/maintainers in case you believe this is an error."
-    elif [[ -e /etc/swizzin/.dev.lock ]]; then
-        echo_warn "Not updating /etc/swizzin as a dev lockfile is present."
-    elif [[ $1 == "--dev" ]]; then
-        echo_warn "Not updating from git due to --dev flag"
-    else
+    echo_log_only "noupdate = $noupdate"
+    if [[ -z $noupdate ]]; then
         echo_progress_start "Updating swizzin local repository"
         git -C /etc/swizzin checkout "${SWIZ_GIT_REF:-master}" >> $log 2>&1 ||
             {
@@ -528,11 +515,33 @@ _run_tests() {
 
 }
 
+branch_name="$(git symbolic-ref HEAD 2> /dev/null)" || branch_name="(unnamed branch)" # detached HEAD
+branch_name=${branch_name##refs/heads/}
+if [ "$branch_name" == "develop" ]; then
+    SWIZ_GIT_REF="develop"
+    export SWIZ_GIT_REF
+    echo_info "Just FYI, you're on the develop branch! Remember that you need to mention this when asking for any sort of support."
+    runtests="true"
+fi
+
+if [[ -L /etc/swizzin ]]; then
+    echo_warn "Not updating /etc/swizzin as it is a symlink. Please consult your provider/maintainers in case you believe this is an error."
+    noupdate="true"
+    runtests="true"
+elif [[ -e /etc/swizzin/.dev.lock ]]; then
+    echo_warn "Not updating /etc/swizzin as a dev lockfile is present."
+    noupdate="true"
+    runtests="true"
+elif [[ $1 == "--dev" ]]; then
+    echo_warn "Not updating from git due to --dev flag"
+    noupdate="true"
+    runtests="true"
+fi
+
 case "$1" in
     "")
         _intro
         _function
-        exit 0
         ;;
     "help" | "-h")
         _help "$0"
@@ -544,7 +553,6 @@ case "$1" in
             exit 1
         fi
         _cli "$@"
-        exit 0
         ;;
     "remove" | "rm")
         if [[ -z $2 ]]; then
@@ -552,7 +560,6 @@ case "$1" in
             exit 1
         fi
         _clr "$@"
-        exit 0
         ;;
     "adduser")
         if [[ -n $4 ]]; then
@@ -560,7 +567,6 @@ case "$1" in
             exit 1
         fi
         _adduser "$@"
-        exit 0
         ;;
     "deluser")
         if [[ -z $2 ]]; then
@@ -572,7 +578,6 @@ case "$1" in
             exit 1
         fi
         _deluser "$@"
-        exit 0
         ;;
     "chpasswd")
         if [[ -z $2 ]]; then
@@ -584,18 +589,15 @@ case "$1" in
             exit 1
         fi
         _chpasswd "$@"
-        exit 0
         ;;
     "rmgrsec")
         _nukeovh
-        exit 0
         ;;
     "rtx")
         /usr/local/bin/swizzin/rtx
         ;;
     "update")
         _update "$2"
-        exit 0
         ;;
     "upgrade")
         if [[ $2 = "--dev" ]]; then
@@ -608,7 +610,6 @@ case "$1" in
         fi
         _update $dev
         _upgrade "$@"
-        exit 0
         ;;
     "list")
         _list
@@ -622,3 +623,7 @@ case "$1" in
         exit 1
         ;;
 esac
+
+if [[ $runtests == "true" ]]; then
+    _run_tests
+fi
