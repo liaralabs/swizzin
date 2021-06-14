@@ -133,6 +133,19 @@ fi
 mkdir -p /etc/nginx/ssl/${hostname}
 chmod 700 /etc/nginx/ssl
 
+/root/.acme.sh/acme.sh --set-default-ca --server letsencrypt >> $log 2>&1 || {
+    echo_warn "Could not set default certificate authority to Let's Encrypt. Upgrading acme.sh to retry."
+    /root/.acme.sh/acme.sh --upgrade >> $log 2>&1 || {
+        echo_error "Could not upgrade acme.sh."
+        exit 1
+    }
+    /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt >> $log 2>&1 || {
+        echo_error "Could not set default certificate authority to Let's Encrypt"
+        exit 1
+    }
+    echo_info "acme.sh has been upgraded successfully."
+}
+
 echo_progress_start "Registering certificates"
 if [[ ${cf} == yes ]]; then
     /root/.acme.sh/acme.sh --force --issue --dns dns_cf -d ${hostname} >> $log 2>&1 || {
