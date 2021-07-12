@@ -59,17 +59,6 @@ _arrconf() {
         echo "pvr:" > "$pvryaml"
         if [ -f /install/.sonarr.lock ]; then
             #TDOD check path
-            apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/NzbDrone/config.xml)
-            cat >> "$pvryaml" << EOF
-- name: sonarr
-  url: http://127.0.0.1:8989
-  apikey: $apikey
-  enabled: true
-  # filters:
-EOF
-        fi
-        if [ -f /install/.sonarrv3.lock ]; then
-            #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/sonarr/config.xml)
             cat >> "$pvryaml" << EOF
 - name: sonarr
