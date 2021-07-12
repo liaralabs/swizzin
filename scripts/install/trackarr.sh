@@ -53,7 +53,7 @@ _nginx() {
 }
 
 _arrconf() {
-    if [[ -e /install/.sonarr.lock ]] || [[ -e /install/.sonarrv3.lock ]] || [[ -e /install/.radarr.lock ]] || [[ -e /install/.lidarr.lock ]]; then
+    if [[ -e /install/.sonarr.lock ]] || [[ -e /install/.radarr.lock ]] || [[ -e /install/.lidarr.lock ]]; then
         echo_progress_start "Adding arrs to the trackarr config"
         touch "$pvryaml"
         echo "pvr:" > "$pvryaml"
