@@ -198,3 +198,5 @@ Whenever possible, please describe how is user management done within your appli
 ## Documentation
 For new applications, please make sure to make the necessary documentation pages on the [Swizzin Docs](https://github.com/liaralabs/docs.swizzin.ltd) repo. It's nice and convenient when you include the link to the Documentation repo PR in the PR here.
 
+## `sysinfo` support
+In case you are making any changes to do with applications, please ensure that the `box sysinfo` command still gives correct output, and the application's variables in `scripts/logging/` are still correct. If they don't exist, please take the time to create and test them.

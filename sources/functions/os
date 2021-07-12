@@ -25,6 +25,12 @@ _os_codename() {
 }
 export -f _os_codename
 
+_os_pretty() {
+    source /etc/os-release
+    printf "$PRETTY_NAME"
+}
+export -f _os_pretty
+
 # Returns the architecture of the device as interpreted by `dpkg`.
 # \
 # Possible output is one of the following:

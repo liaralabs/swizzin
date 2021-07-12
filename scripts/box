@@ -605,6 +605,9 @@ case "$1" in
         _list
         exit 0
         ;;
+    "sysinfo")
+        bash /etc/swizzin/scripts/sysinfo
+        ;;
     "test")
         _run_tests "$@"
         ;;

@@ -139,6 +139,26 @@ function check_swap_off() {
     fi
 }
 
+#Echo a line separated list of possible domains for the instance
+function guess_domains() {
+    ret=""
+    if [[ -f /install/.duckdns.lock ]]; then
+        eval "$(grep subdomain /opt/duckdns/duck.sh | head -1)"
+        ret+="$subdomain.duckdns.org\n"
+    fi
+
+    if [[ -e /etc/nginx/ssl ]]; then
+        ret+=$(find /etc/nginx/ssl/ -maxdepth 1 -mindepth 1 -type d -printf '%f\n')
+    fi
+
+    ret=$(echo "$ret" | sort | uniq)
+    if [[ $ret == "" ]]; then
+        return 1
+    else
+        echo "$ret"
+    fi
+}
+
 # Returns a list of installed apps
 _get_installed_apps() {
     find /install -type f -name .\*.lock | awk -F. '{print $2}' | sort

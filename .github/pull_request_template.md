@@ -30,6 +30,8 @@
 - [ ] Code conforms to project structure [(See more)](https://swizzin.ltd/dev/structure)
 - [ ] Shellcheck isn't screaming [(See more)](https://github.com/swizzin/swizzin/blob/master/CONTRIBUTING.md#editor-plugins-and-tooling)
 - [ ] Prints to terminal are handled [(See more)](https://github.com/swizzin/swizzin/blob/master/CONTRIBUTING.md#printing-into-the-terminal)
+- [ ] Changes have been made or are not necessary in `scripts/sysinfo` [(See nore)](https://github.com/swizzin/swizzin/blob/master/CONTRIBUTING.md#sysinfo-support)
+
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] Testing was done
    - [ ] Tests created or no new tests necessary

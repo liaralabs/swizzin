@@ -3,15 +3,18 @@
 
 function npm_install() {
     if [[ ! -f /etc/apt/sources.list.d/nodesource.list ]]; then
-        bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1
+        echo_progress_start "Adding npm sources"
+        bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1 || {
+            echo_error "Failed to install NodeJS 12"
+            exit 1
+        }
+        echo_progress_done "Sources added"
     elif [[ -f /etc/apt/sources.list.d/nodesource.list ]]; then
         npm_update
     fi
 
     if [[ ! $(command -v npm) ]]; then
-        echo_progress_start "Installing npm"
         apt_install nodejs build-essential
-        echo_progress_done "Npm installed"
     fi
 }
 
@@ -19,7 +22,10 @@ function npm_update() {
     if [[ -f /etc/apt/sources.list.d/nodesource.list ]]; then
         if ! grep -q 12 /etc/apt/sources.list.d/nodesource.list; then
             echo_progress_start "Upgrading nodejs to version 12 LTS"
-            bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1
+            bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1 || {
+                echo_error "Failed to install NodeJS 12."
+                exit 1
+            }
             apt_update
             apt_upgrade
             echo_progress_done "Npm upgraded"
