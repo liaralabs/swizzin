@@ -134,8 +134,6 @@ _add_sonarr_repos() {
     mono_repo_setup
     echo_progress_done "Sources added"
 
-    apt_update
-
     if ! apt-cache policy sonarr | grep -q apt.sonarr.tv; then
         echo_error "Sonarr was not found from apt.sonarr.tv repository. Please inspect the logs and try again later."
         exit 1
