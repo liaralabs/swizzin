@@ -5,12 +5,25 @@
 #shellcheck source=sources/functions/utils
 . /etc/swizzin/sources/functions/utils
 
+if [ -z "$RADARR_OWNER" ]; then
+    if ! RADARR_OWNER="$(swizdb get radarr/owner)"; then
+        RADARR_OWNER=$(_get_master_username)
+        echo_log_only "Setting radarr owner = $RADARR_OWNER"
+        swizdb set "radarr/owner" "$RADARR_OWNER"
+    fi
+else
+    echo_info "Setting radarr owner = $RADARR_OWNER"
+    swizdb set "radarr/owner" "$RADARR_OWNER"
+fi
+
+user="$RADARR_OWNER"
+
 _install_radarr() {
     apt_install curl mediainfo sqlite3
 
-    radarrConfDir="/home/$radarrOwner/.config/Radarr"
+    radarrConfDir="/home/$user/.config/Radarr"
     mkdir -p "$radarrConfDir"
-    chown -R "$radarrOwner":"$radarrOwner" /home/$radarrOwner/.config
+    chown -R "$user":"$user" /home/"$user"/.config
 
     echo_progress_start "Downloading release archive"
     case "$(_os_arch)" in
@@ -43,13 +56,13 @@ After=syslog.target network.target
 
 [Service]
 # Change the user and group variables here.
-User=${radarrOwner}
-Group=${radarrOwner}
+User=${user}
+Group=${user}
 
 Type=simple
 
 # Change the path to Radarr here if it is in a different location for you.
-ExecStart=/opt/Radarr/Radarr -nobrowser -data=/home/$radarrOwner/.config/Radarr/
+ExecStart=/opt/Radarr/Radarr -nobrowser -data=/home/$user/.config/Radarr/
 TimeoutStopSec=20
 KillMode=process
 Restart=on-failure
@@ -64,7 +77,7 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 EOF
-    chown -R "$radarrOwner":"$radarrOwner" /opt/Radarr
+    chown -R "$user":"$user" /opt/Radarr
     systemctl -q daemon-reload
     systemctl enable --now -q radarr
     sleep 1
@@ -95,10 +108,6 @@ _nginx_radarr() {
         echo_info "Radarr will be available on port 7878. Secure your installation manually through the web interface."
     fi
 }
-
-if [[ -z $radarrOwner ]]; then
-    radarrOwner=$(_get_master_username)
-fi
 
 _install_radarr
 _nginx_radarr
