@@ -10,7 +10,7 @@
 if [ -z "$SONARR_OWNER" ]; then
     if ! SONARR_OWNER="$(swizdb get sonarr/owner)"; then
         SONARR_OWNER=$(_get_master_username)
-        echo_info "Setting sonarr owner = $SONARR_OWNER"
+        echo_log_only "Setting sonarr owner = $SONARR_OWNER"
         swizdb set "sonarr/owner" "$SONARR_OWNER"
     fi
 else
@@ -132,6 +132,7 @@ _add_sonarr_repos() {
     #shellcheck source=sources/functions/mono
     . /etc/swizzin/sources/functions/mono
     mono_repo_setup
+    echo_progress_done "Sources added"
 
     apt_update
 
