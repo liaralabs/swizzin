@@ -8,7 +8,7 @@ if [[ -f /install/.radarr.lock ]]; then
         echo_info "Moving Radarr from mono to .Net"
         #shellcheck source=sources/functions/utils
         . /etc/swizzin/sources/functions/utils
-        [[ -z $radarrOwner ]] && radarrOwner=$(_get_master_username)
+        [[ -z $RADARR_OWNER ]] && RADARR_OWNER=$(_get_master_username)
 
         if [[ $(_radarr_version) = "mono-v3" ]]; then
             echo_progress_start "Downloading release files"
@@ -38,7 +38,7 @@ if [[ -f /install/.radarr.lock ]]; then
 
             echo_progress_start "Extracting archive"
             tar -xvf /tmp/Radarr.tar.gz -C /opt >> "$log" 2>&1
-            chown -R "$radarrOwner":"$radarrOwner" /opt/Radarr
+            chown -R "$RADARR_OWNER":"$RADARR_OWNER" /opt/Radarr
             echo_progress_done "Archive extracted"
 
             echo_progress_start "Fixing Radarr systemd service"
@@ -63,36 +63,29 @@ if [[ -f /install/.radarr.lock ]]; then
     else
         echo_log_only "Radarr's service is not pointing to mono"
     fi
+
+    # Ensure the sonarr owner is recorded
+    if [ -z "$RADARR_OWNER" ]; then
+        if ! RADARR_OWNER="$(swizdb get radarr/owner)"; then
+            master=$(_get_master_username)
+            if [ ! -d /home/"$master"/.config/Radarr ]; then
+                echo_error "Could not find Radarr config in master's home folder. Please export the \"RADARR_OWNER\" as described below, and run \`box update\` again."
+                echo_docs "applications/radarr#optional-parameters"
+                # Stop the box updater because who knows what could rely on this in the future
+                exit 1
+            fi
+            RADARR_OWNER="$master"
+            echo_info "Setting Radarr owner = $RADARR_OWNER"
+            swizdb set "radarr/owner" "$RADARR_OWNER"
+        fi
+    else
+        echo_info "Setting Radarr owner = $RADARR_OWNER"
+        swizdb set "radarr/owner" "$RADARR_OWNER"
+    fi
+
+    app_configfile="/home/${RADARR_OWNER}/.config/Radarr/config.xml"
+
     #Mandatory SSL Port change for Readarr
-    #shellcheck source=sources/functions/utils
-    . /etc/swizzin/sources/functions/utils
-    app_name="radarr"
-    if [ -z "$radarrOwner" ]; then
-        if ! radarrOwner="$(swizdb get $app_name/owner)"; then
-            radarrOwner=$(_get_master_username)
-            ownerToSetInDB='True'
-        fi
-    else
-        ownerToSetInDB='True'
-    fi
-
-    app_configfile="/home/$radarrOwner/.config/Radarr/config.xml"
-
-    if [[ $ownerToSetInDB = 'True' ]]; then
-        if [ -e "$app_configfile" ]; then
-            echo_info "Setting ${app_name^} owner = $radarrOwner in SwizDB"
-            swizdb set "$app_name/owner" "$radarrOwner"
-        else
-            echo_error "${app_name^} config file for radarr owner does not exist in expected location.
-We are checking for $app_configfile.
-If the user here is incorrect, please run \`radarrOwner=<user> box update\`.
-${app_name^} updater is exiting, please try again later."
-            exit 1
-        fi
-    else
-        echo_log_only "Radarr owner $radarrOwner apparently did not need an update"
-    fi
-
     if grep -q "<SslPort>8787" "$app_configfile"; then
         echo_progress_start "Changing Radarr's default SSL port"
         sed -i 's|<SslPort>8787</SslPort>|<SslPort>9898</SslPort>|g' "$app_configfile"
