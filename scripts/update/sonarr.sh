@@ -34,17 +34,19 @@ if [[ -f /install/.sonarr.lock ]] && [[ $v2present != "true" ]]; then
         if ! SONARR_OWNER="$(swizdb get sonarr/owner)"; then
             master=$(_get_master_username)
             if [ ! -d /home/"$master"/.config/sonarr ]; then
-                echo_error "Could not find Sonarr config in master's home folder. Please export the \"SONARR_OWNER\" as described below, and run \`box update\` again."
+                echo_error "Config dir /home/$master/.config/Radarr does not exist.\nPlease export the \"SONARR_OWNER\" as described below, and run \`box update\` again."
                 echo_docs "applications/sonarrv3#optional-parameters"
-
-                # Stop the box updater because who knows what could rely on this in the future
-                exit 1
+                exit 1 # Stop the box updater because who knows what could rely on this in the future
             fi
             SONARR_OWNER="$master"
             echo_info "Setting sonarr owner = $SONARR_OWNER"
             swizdb set "sonarr/owner" "$SONARR_OWNER"
         fi
     else
+        if [ ! -d /home/"$SONARR_OWNER"/.config/Radarr ]; then
+            echo_error "Config dir /home/$SONARR_OWNER/.config/Radarr does not exist."
+            exit 1 # Stop the box updater because who knows what could rely on this in the future
+        fi
         echo_info "Setting sonarr owner = $SONARR_OWNER"
         swizdb set "sonarr/owner" "$SONARR_OWNER"
     fi

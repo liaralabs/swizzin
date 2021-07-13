@@ -69,7 +69,7 @@ if [[ -f /install/.radarr.lock ]]; then
         if ! RADARR_OWNER="$(swizdb get radarr/owner)"; then
             master=$(_get_master_username)
             if [ ! -d /home/"$master"/.config/Radarr ]; then
-                echo_error "Could not find Radarr config in master's home folder. Please export the \"RADARR_OWNER\" as described below, and run \`box update\` again."
+                echo_error "Config dir /home/$RADARR_OWNER/.config/Radarr does not exist.\nPlease export the \"RADARR_OWNER\" as described below, and run \`box update\` again."
                 echo_docs "applications/radarr#optional-parameters"
                 # Stop the box updater because who knows what could rely on this in the future
                 exit 1
@@ -79,6 +79,11 @@ if [[ -f /install/.radarr.lock ]]; then
             swizdb set "radarr/owner" "$RADARR_OWNER"
         fi
     else
+        if [ ! -d /home/"$RADARR_OWNER"/.config/Radarr ]; then
+            echo_error "Config dir /home/$RADARR_OWNER/.config/Radarr does not exist."
+            # Stop the box updater because who knows what could rely on this in the future
+            exit 1
+        fi
         echo_info "Setting Radarr owner = $RADARR_OWNER"
         swizdb set "radarr/owner" "$RADARR_OWNER"
     fi
