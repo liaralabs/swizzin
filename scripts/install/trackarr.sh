@@ -10,17 +10,16 @@ _install() {
         exit 1
     }
     case $(_os_arch) in
-        "amd64") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_amd64"))|.url')" ;;
-        "arm64") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_arm64"))|.url')" ;;
-        "armhf") dlurl="$(echo "${trackarr_releases}" | jq '.|select(.url | contains("linux_armhf"))|.url')" ;;
+        "amd64") dlurl="$(echo "${trackarr_releases}" | jq -r '.|select(.url | contains("linux_amd64"))|.url')" ;;
+        "arm64") dlurl="$(echo "${trackarr_releases}" | jq -r '.|select(.url | contains("linux_arm64"))|.url')" ;;
+        "armhf") dlurl="$(echo "${trackarr_releases}" | jq -r '.|select(.url | contains("linux_armhf"))|.url')" ;;
         *)
             echo_error "Arch not supported"
             exit 1
             ;;
     esac
     echo_progress_start "Downloading trackarr and extracting"
-
-    if ! wget $dlurl -O /tmp/trackarr.tar.gz >> $log 2>&1; then
+    if ! wget "$dlurl" -O /tmp/trackarr.tar.gz >> $log 2>&1; then
         echo_error "Failed to download"
         exit 1
     fi
