@@ -2,7 +2,7 @@
 
 if ask "Would you like to purge the configuration?" Y; then
     rm -rf "/home/$(swizdb get radarr/owner)/.config/Radarr"
-    swizdb clear "sonarr/owner"
+    swizdb clear "radarr/owner"
 fi
 
 systemctl disable --now -q radarr

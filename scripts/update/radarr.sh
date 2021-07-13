@@ -64,7 +64,7 @@ if [[ -f /install/.radarr.lock ]]; then
         echo_log_only "Radarr's service is not pointing to mono"
     fi
 
-    # Ensure the sonarr owner is recorded
+    # Ensure the radarr owner is recorded
     if [ -z "$RADARR_OWNER" ]; then
         if ! RADARR_OWNER="$(swizdb get radarr/owner)"; then
             master=$(_get_master_username)
