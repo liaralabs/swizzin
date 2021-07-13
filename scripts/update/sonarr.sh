@@ -34,7 +34,9 @@ if [[ -f /install/.sonarr.lock ]] && [[ $v2present != "true" ]]; then
         if ! SONARR_OWNER="$(swizdb get sonarr/owner)"; then
             master=$(_get_master_username)
             if [ ! -d /home/"$master"/.config/sonarr ]; then
-                echo_error "Could not find Sonarr config in master's home folder. Please export the variable \"SONARR_OWNER\" and run \`box update\` again."
+                echo_error "Could not find Sonarr config in master's home folder. Please export the \"SONARR_OWNER\" as described below, and run \`box update\` again."
+                echo_docs "applications/sonarrv3#optional-parameters"
+
                 # Stop the box updater because who knows what could rely on this in the future
                 exit 1
             fi

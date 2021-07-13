@@ -8,6 +8,7 @@ if ask "Would you like to purge the configuration?" Y; then
 else
     apt_remove sonarr
 fi
+
 if [[ -f /install/.nginx.lock ]]; then
     rm /etc/nginx/apps/sonarr.conf
     systemctl reload nginx >> "$log" 2>&1
