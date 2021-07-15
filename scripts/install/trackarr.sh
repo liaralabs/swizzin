@@ -59,9 +59,10 @@ _arrconf() {
         if [ -f /install/.sonarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/sonarr/config.xml)
+            [ -f /install/.nginx.lock ] && s_base="/sonarr"
             cat >> "$pvryaml" << EOF
 - name: sonarr
-  url: http://127.0.0.1:8989
+  url: http://127.0.0.1:8989${s_base}
   apikey: $apikey
   enabled: true
   # filters:
@@ -70,9 +71,10 @@ EOF
         if [ -f /install/.radarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/Radarr/config.xml)
+            [ -f /install/.nginx.lock ] && r_base="/radarr"
             cat >> "$pvryaml" << EOF
 - name: radarr
-  url: http://127.0.0.1:7878
+  url: http://127.0.0.1:7878${r_base}
   apikey: $apikey
   enabled: true
   # filters:
@@ -81,9 +83,10 @@ EOF
         if [ -f /install/.lidarr.lock ]; then
             #TDOD check path
             apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" /home/"$user"/.config/Lidarr/config.xml)
+            [ -f /install/.nginx.lock ] && l_base="/lidarr"
             cat >> "$pvryaml" << EOF
 - name: lidarr
-  url: http://127.0.0.1:8686
+  url: http://127.0.0.1:8686${l_base}
   apikey: $apikey
   enabled: true
   # filters:
