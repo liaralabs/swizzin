@@ -177,7 +177,19 @@ We URGE you to migrate to a supported release if/while you still have the chance
 
 function _upgrade() {
     arg=("$@")
-    packages=("${arg[@]:1}")
+    if [[ "${arg[*]}" == *--all* ]]; then
+        echo_info "All possible installed packages will be upgraded (except torrent clients)\nPackages that are installed via \`apt\` will not be upgraded, please attempt those manually"
+        packages=($(find /install -type f -name .*.lock | awk -F. '{print $2}'))
+        # readarray -t packages < <(find /install -type f -name '.*.lock' | awk -F. '{print $2}')
+        blacklist=("rtorrent" "qbittorrent" "deluge" "libtorrent" "panel")
+        for blocker in "${blacklist[@]}"; do
+            packages=("${packages[@]/$blocker/}")
+        done
+        echo_info "Packages = '${packages[*]}'"
+    else
+        packages=("${arg[@]:1}")
+    fi
+
     repo=($(find /usr/local/bin/swizzin/upgrade -type f -printf "%f\n" | cut -d "." -f 1))
     for i in "${packages[@]}"; do
         app=${i}

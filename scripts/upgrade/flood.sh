@@ -4,6 +4,11 @@
 
 users=($(cut -d: -f1 < /etc/htpasswd))
 
+if [ ! -f /install/.flood.lock ]; then
+    echo_warn "Flood is not installed"
+    exit 0
+fi
+
 if [[ ! $(which node-gyp) ]]; then
     npm install -g node-gyp >> $log 2>&1
 fi
