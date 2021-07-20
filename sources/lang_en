@@ -18,6 +18,7 @@
 $L['AUTODL'] = 'A tool to help you automatically add torrents to your clients from IRC announce channels, filtering them through regex expressions.';
 $L['BAZARR'] = 'The "-arr" tool to manage subtitles for items in Sonarr and Radarr.';
 $L['BTSYNC'] = 'BitTorrent Sync by BitTorrent aka Resilio is a proprietary peer-to-peer file synchronization tool.';
+$L['CALIBREWEB'] = 'A Web-based frontend for your Calibre database with a rich feature-set and e-reader synchronisation capabilites, as well as optionally multi-user setup. calibreweb also offers an OPDS server';
 $L['COUCHPOTATO'] = 'Download movies automatically, easily and in the best quality as soon as they are released, via usenet or torrents.';
 $L['CSF'] = 'ConfigServer Firewall, also known as CSF, is a firewall configuration script created to provide better security for your server while giving you an easy to use, advanced interface for managing your firewall settings.';
 $L['DELUGE'] = 'Deluge is a lightweight, Free Software, cross-platform BitTorrent client.';
