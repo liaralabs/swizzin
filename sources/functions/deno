@@ -1,0 +1,16 @@
+#!/bin/bash
+# Deno installer
+
+install_deno() {
+    if ! which deno > /dev/null; then
+        apt_install unzip
+        echo_progress_start "Installing deno"
+        if ! curl -fsSL https://deno.land/x/install/install.sh | DENO_INSTALL=/usr/local sh >> $log; then
+            echo_error "Deno failed to install"
+            exit 1
+        fi
+        echo_progress_done "Deno installed"
+    else
+        echo_log_only "Deno already installed"
+    fi
+}
