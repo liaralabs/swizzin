@@ -1,0 +1,163 @@
+#!/bin/bash
+
+function _requestrr_download() {
+    echo_progress_start "Downloading source files"
+    urlbase=https://api.github.com/repos/darkalfx/requestrr/releases/latest
+    case "$(_os_arch)" in
+        "amd64") dlurl=$(curl -sNL $urlbase | grep -Po 'ht(.*)linux-x64(.*)zip') >> ${log} 2>&1 ;;
+        "armhf") dlurl=$(curl -sNL $urlbase | grep -Po 'ht(.*)linux-arm(.*)zip') >> ${log} 2>&1 ;;
+        "arm64") dlurl=$(curl -sNL $urlbase | grep -Po 'ht(.*)linux-arm64(.*)zip') >> ${log} 2>&1 ;;
+        *)
+            echo_error "Arch not supported"
+            exit 1
+            ;;
+    esac
+
+    if ! curl "$dlurl" -L -o /tmp/requestrr.zip >> "$log" 2>&1; then
+        echo_error "Download failed, exiting"
+        exit 1
+    fi
+    echo_progress_done "Source downloaded"
+}
+
+function _requestrr_chpass() {
+    password="$(_get_user_password "$(_get_master_username)")"
+    local_packages=/usr/local/bin/swizzin
+    readarray -t hashpass < <(python3 ${local_packages}/requestrr.hashPass.py "${password}")
+    export requestrr_pass=${hashpass[0]}
+    export requestrr_key=${hashpass[1]}
+}
+
+function _requestrr_config() {
+    _requestrr_chpass
+    if [[ -f /install/.sonarr.lock ]]; then
+        s_config="/home/$user/.config/sonarr/config.xml"
+        s_bind=$(sed -n 's|\(.*\)<BindAddress>\(.*\)</BindAddress>|\2|p' "$s_config")
+        s_port=$(sed -n 's|\(.*\)<Port>\(.*\)</Port>|\2|p' "$s_config")
+        s_api=$(sed -n 's|\(.*\)<ApiKey>\(.*\)</ApiKey>|\2|p' "$s_config")
+        s_base=$(sed -n 's|\(.*\)<UrlBase>\(.*\)</UrlBase>|\2|p' "$s_config")
+    fi
+    if [[ -f /install/.radarr.lock ]]; then
+        r_config="/home/$(swizdb get radarr/owner)/.config/Radarr/config.xml"
+        r_bind=$(sed -n 's|\(.*\)<BindAddress>\(.*\)</BindAddress>|\2|p' "$r_config")
+        r_port=$(sed -n 's|\(.*\)<Port>\(.*\)</Port>|\2|p' "$r_config")
+        r_api=$(sed -n 's|\(.*\)<ApiKey>\(.*\)</ApiKey>|\2|p' "$r_config")
+        r_base=$(sed -n 's|\(.*\)<UrlBase>\(.*\)</UrlBase>|\2|p' "$r_config")
+    fi
+    cat > /opt/requestrr/SettingsTemplate.json << CFG
+{
+  "Authentication": {
+    "Username": "$(_get_master_username)",
+    "Password": "${requestrr_pass}",
+    "PrivateKey": "${requestrr_key}"
+  },
+  "ChatClients": {
+    "Discord": {
+      "BotToken": "",
+      "ClientId": "",
+      "StatusMessage": "!help",
+      "TvShowRoles": [],
+      "MovieRoles": [],
+      "MonitoredChannels": [],
+      "EnableRequestsThroughDirectMessages": false,
+      "AutomaticallyNotifyRequesters": true,
+      "NotificationMode": "PrivateMessages",
+      "NotificationChannels": [],
+      "AutomaticallyPurgeCommandMessages": false,
+      "DisplayHelpCommandInDMs": true
+    }
+  },
+  "DownloadClients": {
+    "Ombi": {
+      "Hostname": "",
+      "Port": 3579,
+      "ApiKey": "",
+      "ApiUsername": "",
+      "BaseUrl": "",
+      "UseSSL": false,
+      "Version": "3"
+    },
+    "Overseerr": {
+      "Hostname": "",
+      "Port": 5055,
+      "ApiKey": "",
+      "DefaultApiUserID": "",
+      "UseSSL": false,
+      "Version": "1"
+    },
+    "Radarr": {
+      "Hostname": "${r_bind}",
+      "Port": ${r_port:-7878},
+      "ApiKey": "${r_api}",
+      "BaseUrl": "${r_base}",
+      "MovieProfileId": "1",
+      "MovieRootFolder": "",
+      "MovieMinimumAvailability": "",
+      "MovieTags": [],
+      "AnimeProfileId": "1",
+      "AnimeRootFolder": "",
+      "AnimeMinimumAvailability": "",
+      "AnimeTags": [],
+      "SearchNewRequests": true,
+      "MonitorNewRequests": true,
+      "UseSSL": false,
+      "Version": "2"
+    },
+    "Sonarr": {
+      "Hostname": "${s_bind}",
+      "Port": ${s_port:-8989},
+      "ApiKey": "${s_api}",
+      "BaseUrl": "${s_base}",
+      "TvProfileId": "1",
+      "TvRootFolder": "",
+      "TvTags": [],
+      "TvLanguageId": "1",
+      "TvUseSeasonFolders": true,
+      "AnimeProfileId": "1",
+      "AnimeRootFolder": "",
+      "AnimeTags": [],
+      "AnimeLanguageId": "1",
+      "AnimeUseSeasonFolders": true,
+      "SearchNewRequests": true,
+      "MonitorNewRequests": true,
+      "UseSSL": false,
+      "Version": "3"
+    }
+  },
+  "BotClient": {
+    "Client": "",
+    "CommandPrefix": "!"
+  },
+  "Movies": {
+    "Client": "Disabled",
+    "Command": "movie"
+  },
+  "TvShows": {
+    "Client": "Disabled",
+    "Command": "tv",
+    "Restrictions": "None"
+  },
+  "Port": 4545,
+  "BaseUrl" : "/requestrr",
+  "Version": "1.12.0"
+}
+CFG
+}
+
+requestrr_systemd() {
+    cat > /etc/systemd/system/requestrr.service << EOF
+[Unit]
+Description=Requestrr Daemon
+After=syslog.target network.target
+[Service]
+User=requestrr
+Type=simple
+WorkingDirectory=/opt/requestrr/
+ExecStart=/opt/requestrr/Requestrr.WebApi
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+}
