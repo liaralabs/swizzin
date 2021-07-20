@@ -12,22 +12,32 @@ fi
 for u in "${users[@]}"; do
     if [[ $u = "$master" ]]; then continue; fi
     USER=${u^^}
+    USERCMDS="$(echo "${USER}CMDS" | tr -cd '[:alnum:]._-')"
+
     if grep -q ${USER}CMNDS /etc/sudoers.d/$u; then
         echo_info "Fixing sudo permissions for $u"
-        sed -i "s/${USER}CMNDS/${USER}CMDS/g" /etc/sudoers.d/$u
+        sed -i "s/${USER}CMNDS/${USERCMDS}/g" /etc/sudoers.d/$u
     fi
 done
 
-for u in "${users[@]}"; do
-    if [[ $u = "$master" ]]; then continue; fi
-    USER=${u^^}
-    if grep -q flood /etc/sudoers.d/$u; then
-        :
-    else
-        echo_info "Adding flood sudo permissions for $u"
-        sed -i "s/${USER}CMDS = /${USER}CMDS = \/bin\/systemctl stop flood@${user}, \/bin\/systemctl restart flood@${user}, \/bin\/systemctl start flood@${user}, /g" /etc/sudoers.d/$u
-    fi
-done
+if [ -f /install/.flood.lock ]; then
+    for u in "${users[@]}"; do
+        if [[ $u = "$master" ]]; then continue; fi
+        USER=${u^^}
+        USERCMDS="$(echo "${USER}CMDS" | tr -cd '[:alnum:]._-')"
+
+        if grep -q flood /etc/sudoers.d/$u; then
+            :
+        else
+            echo_info "Adding flood sudo permissions for $u"
+            if grep -q ${USER}CMDS /etc/sudoers.d/$u; then
+                sed -i "s/${USER}CMDS = /${USER}CMDS = \/bin\/systemctl stop flood@${user}, \/bin\/systemctl restart flood@${user}, \/bin\/systemctl start flood@${user}, /g" /etc/sudoers.d/$u
+            else
+                sed -i "s/${USERCMDS} = /${USERCMDS} = \/bin\/systemctl stop flood@${user}, \/bin\/systemctl restart flood@${user}, \/bin\/systemctl start flood@${user}, /g" /etc/sudoers.d/$u
+            fi
+        fi
+    done
+fi
 
 if [[ -f /etc/sudoers.d/panel ]]; then
     if grep -q -E "(sed|grep|box|drop_caches|set_interface|pkill|killall|reload|vnstat|ifstat|PACKAGECMNDS)" /etc/sudoers.d/panel; then
