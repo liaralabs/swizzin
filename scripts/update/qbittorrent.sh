@@ -19,4 +19,9 @@ if [[ -f /install/.qbittorrent.lock ]]; then
         echo_info "qBittorrent systemd services have been updated. Please restart qBittorrent services at your convenience."
     fi
     #End systemd service updates
+    if ! grep -q "proxy_connect_timeout" /etc/nginx/apps/qbittorrent.conf; then
+        echo_info "Updating nginx config for qbit"
+        /etc/swizzin/scripts/nginx/qbittorrent.sh
+        systemctl reload nginx
+    fi
 fi
