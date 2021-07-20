@@ -3,7 +3,10 @@
 
 function npm_install() {
     if [[ ! -f /etc/apt/sources.list.d/nodesource.list ]]; then
-        bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1
+        bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1 || {
+            echo_error "Failed to install node"
+            return 1
+        }
     elif [[ -f /etc/apt/sources.list.d/nodesource.list ]]; then
         npm_update
     fi
@@ -19,7 +22,10 @@ function npm_update() {
     if [[ -f /etc/apt/sources.list.d/nodesource.list ]]; then
         if ! grep -q 12 /etc/apt/sources.list.d/nodesource.list; then
             echo_progress_start "Upgrading nodejs to version 12 LTS"
-            bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1
+            bash <(curl -sL https://deb.nodesource.com/setup_12.x) >> $log 2>&1 || {
+                echo_error "Failed to install node"
+                return 1
+            }
             apt_update
             apt_upgrade
             echo_progress_done "Npm upgraded"

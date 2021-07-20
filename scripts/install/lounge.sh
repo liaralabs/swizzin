@@ -6,9 +6,16 @@ function _install() {
 
     useradd lounge --system -m -d /opt/lounge
 
-    npm -g config set user root
+    npm -g config set user root || {
+        echo_error "npm config step failed"
+        exit 1
+    }
+
     echo_progress_start "Installing lounge from npm"
-    npm install -g thelounge >> $log 2>&1
+    npm install -g thelounge >> $log 2>&1 || {
+        echo_error "Lounge failed to install"
+        exit 1
+    }
     sudo -u lounge bash -c "thelounge install thelounge-theme-zenburn" >> $log 2>&1
     echo_progress_done
 
@@ -388,8 +395,10 @@ if [[ -n $1 ]]; then
     _adduser
     exit 0
 fi
+
+#shellcheck source=sources/functions/npm
 . /etc/swizzin/sources/functions/npm
-npm_install
+npm_install || exit 1
 _install
 _adduser
 
