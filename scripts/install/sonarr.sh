@@ -5,13 +5,21 @@
 #shellcheck source=sources/functions/utils
 . /etc/swizzin/sources/functions/utils
 
-[[ -z $sonarroldowner ]] && sonarroldowner=$(_get_master_username)
+[[ -z $SONARR_OLD_OWNER ]] && SONARR_OLD_OWNER=$(_get_master_username)
 
-if [[ -z $sonarrv3owner ]]; then
-    sonarrv3owner=$(_get_master_username)
+if [ -z "$SONARR_OWNER" ]; then
+    if ! SONARR_OWNER="$(swizdb get sonarr/owner)"; then
+        SONARR_OWNER=$(_get_master_username)
+        echo_log_only "Setting sonarr owner = $SONARR_OWNER"
+        swizdb set "sonarr/owner" "$SONARR_OWNER"
+    fi
+else
+    echo_info "Setting sonarr owner = $SONARR_OWNER"
+    swizdb set "sonarr/owner" "$SONARR_OWNER"
 fi
 
-sonarrv3confdir="/home/$sonarrv3owner/.config/sonarr"
+user="$SONARR_OWNER"
+sonarrv3confdir="/home/$user/.config/sonarr"
 
 #Handles existing v2 instances
 _sonarrold_flow() {
@@ -37,13 +45,13 @@ _sonarrold_flow() {
                 address="http://127.0.0.1:8989/api"
             fi
 
-            [[ -z $sonarroldowner ]] && sonarroldowner=$(_get_master_username)
-            if [[ ! -d /home/"${sonarroldowner}"/.config/NzbDrone ]]; then
-                echo_error "No Sonarr config folder found for $sonarroldowner. Exiting"
+            [[ -z $SONARR_OLD_OWNER ]] && SONARR_OLD_OWNER=$(_get_master_username)
+            if [[ ! -d /home/"${SONARR_OLD_OWNER}"/.config/NzbDrone ]]; then
+                echo_error "No Sonarr config folder found for $SONARR_OLD_OWNER. Exiting"
                 exit 1
             fi
 
-            apikey=$(awk -F '[<>]' '/ApiKey/{print $3}' /home/"${sonarroldowner}"/.config/NzbDrone/config.xml)
+            apikey=$(awk -F '[<>]' '/ApiKey/{print $3}' /home/"${SONARR_OLD_OWNER}"/.config/NzbDrone/config.xml)
             echo_log_only "apikey = $apikey"
 
             #This starts a backup on the current Sonarr instance. The logic below waits until the query returns as "completed"
@@ -82,21 +90,21 @@ _sonarrold_flow() {
 
         mkdir -p /root/swizzin/backups/
         echo_progress_start "Copying files to a backup location"
-        cp -R /home/"${sonarroldowner}"/.config/NzbDrone /root/swizzin/backups/sonarrold.bak
+        cp -R /home/"${SONARR_OLD_OWNER}"/.config/NzbDrone /root/swizzin/backups/sonarrold.bak
         echo_progress_done "Backups copied"
 
-        if [[ -d /home/"${sonarrv3owner}"/.config/sonarr ]]; then
-            if ask "$sonarrv3owner already has a sonarrv3 directory. Overwrite?" Y; then
+        if [[ -d /home/"${user}"/.config/sonarr ]]; then
+            if ask "$user already has a sonarrv3 directory. Overwrite?" Y; then
                 rm -rf
-                cp -R /home/"${sonarroldowner}"/.config/NzbDrone /home/"${sonarrv3owner}"/.config/sonarr
+                cp -R /home/"${SONARR_OLD_OWNER}"/.config/NzbDrone /home/"${user}"/.config/sonarr
             else
                 echo_info "Leaving v3 dir as is, why did we do any of this..."
             fi
         else
-            cp -R /home/"${sonarroldowner}"/.config/NzbDrone /home/"${sonarrv3owner}"/.config/sonarr
+            cp -R /home/"${SONARR_OLD_OWNER}"/.config/NzbDrone /home/"${user}"/.config/sonarr
         fi
 
-        systemctl stop sonarr@"${sonarroldowner}"
+        systemctl stop sonarr@"${SONARR_OLD_OWNER}"
 
         # We don't have the debconf configuration yet so we can't migrate the data.
         # Instead we symlink so postinst knows where it's at.
@@ -124,8 +132,7 @@ _add_sonarr_repos() {
     #shellcheck source=sources/functions/mono
     . /etc/swizzin/sources/functions/mono
     mono_repo_setup
-
-    apt_update
+    echo_progress_done "Sources added"
 
     if ! apt-cache policy sonarr | grep -q apt.sonarr.tv; then
         echo_error "Sonarr was not found from apt.sonarr.tv repository. Please inspect the logs and try again later."
@@ -135,12 +142,12 @@ _add_sonarr_repos() {
 
 _install_sonarr() {
     mkdir -p "$sonarrv3confdir"
-    chown -R "$sonarrv3owner":"$sonarrv3owner" /home/"$sonarrv3owner"/.config
+    chown "$user":"$user" /home/"$user"/.config
+    chown "$user":"$user" -R "$sonarrv3confdir"
 
-    echo_log_only "Setting sonarr v3 owner to $sonarrv3owner"
     # settings relevant from https://github.com/Sonarr/Sonarr/blob/phantom-develop/distribution/debian/config
-    echo "sonarr sonarr/owning_user string ${sonarrv3owner}" | debconf-set-selections
-    echo "sonarr sonarr/owning_group string ${sonarrv3owner}" | debconf-set-selections
+    echo "sonarr sonarr/owning_user string ${user}" | debconf-set-selections
+    echo "sonarr sonarr/owning_group string ${user}" | debconf-set-selections
     echo "sonarr sonarr/config_directory string ${sonarrv3confdir}" | debconf-set-selections
     apt_install sonarr sqlite3
     touch /install/.sonarr.lock
@@ -158,22 +165,6 @@ _install_sonarr() {
     fi
     echo_progress_done "Internal upgrade finished"
 }
-
-# _add2usergroups_sonarrv3 () {
-#         if [[ -z $sonarrv3grouplist ]]; then
-#             if ask "Do you want to let Sonarr access other users' home directories?" N; then
-#                 echo "Space separated list of users to give sonarr access to: (e.g. \"user1 user2\")"
-#                 read -r sonarrv3grouplist
-#             fi
-#         fi
-#         if [[ -n $sonarrv3grouplist ]]; then
-#             for u in $sonarrv3grouplist; do
-#                 echo "Adding ${sonarrv3owner} to $u's group"
-#                 usermod -a -G "$u" "$sonarrv3owner"
-#                 chmod g+rwx /home/"$u"
-#             done
-#         fi
-# }
 
 _nginx_sonarr() {
     if [[ -f /install/.nginx.lock ]]; then
