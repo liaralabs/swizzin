@@ -47,6 +47,8 @@ _nginx() {
         pass=$(_get_user_password "$user")
         sed -i "/^server:*/a \ \ pass: $pass" /opt/trackarr/config.yaml
         sed -i "/^server:*/a \ \ user: $user" /opt/trackarr/config.yaml
+        chown -R trackarr: /opt/trackarr
+        chmod 700 -R /opt/trackarr
         echo_info "trackarr will be running on port 7337 and protected by your master's credentials"
     fi
 }
@@ -94,6 +96,8 @@ EOF
         fi
         echo_progress_done "Arrs added"
     fi
+    chmod 700 -R /opt/trackarr
+
 }
 
 function _systemd() {
