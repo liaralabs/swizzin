@@ -29,4 +29,42 @@ if [[ -f /install/.bazarr.lock ]]; then
         sudo -u ${user} bash -c "/opt/.venv/bazarr/bin/pip3 install -r /opt/bazarr/requirements.txt" > /dev/null 2>&1
         systemctl try-restart bazarr
     fi
+
+    # Switching deployment type from git-based to release archive
+    if [ -d /opt/bazarr/.git ]; then
+        echo_progress_start "Updating bazarr to new structure"
+        active=$(systemctl is-active bazarr)
+        if [[ $active == "active" ]]; then
+            systemctl stop bazarr
+        fi
+
+        wget https://github.com/morpheus65535/bazarr/releases/latest/download/bazarr.zip -O /tmp/bazarr.zip >> $log 2>&1 || {
+            echo_error "Failed to download"
+            exit 1
+        }
+
+        cp -R /opt/bazarr/data /tmp/bazarr_data
+        mv /opt/bazarr/ /tmp/bazarr-bak
+
+        mkdir /opt/bazarr
+        unzip /tmp/bazarr.zip -d /opt/bazarr >> $log 2>&1 || {
+            echo_error "Failed to extract zip"
+            mv /tmp/bazarr-bak /opt/bazarr/
+            exit 1
+        }
+        rm /tmp/bazarr.zip
+
+        sudo -u "${user}" bash -c "/opt/.venv/bazarr/bin/pip3 install -r /opt/bazarr/requirements.txt" >> $log 2>&1 || {
+            echo_error "Dependencies failed to install"
+            exit 1
+        }
+
+        cp -R /tmp/bazarr_data /opt/bazarr/data
+        chown -R "${user}": /opt/bazarr
+
+        if [[ $active == "active" ]]; then
+            systemctl start bazarr
+        fi
+        echo_progress_done "Bazarr updated"
+    fi
 fi
